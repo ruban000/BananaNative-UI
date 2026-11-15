@@ -1396,7 +1396,7 @@ final class Ui {
             tab.setSoundEffectsEnabled(false);
             tab.setSelected(on);
             tab.setContentDescription(labels[k] + (on ? ", tab, selected" : ", tab"));
-            focusMotion(c, tab, 10);
+            sharedFocus(c, tab, 10);
             tab.setOnClickListener(v -> { click(v); if (i != sel) pick.accept(i); });
             row.addView(tab, wrap());
         }
