@@ -347,6 +347,21 @@ final class Ui {
                 controller.clearIfIdle();
             }
         });
+        // A setting can grow or shrink when its switch changes the explanatory text.
+        // Re-measure the shared focus frame after layout so it always wraps the full row.
+        v.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (!view.hasFocus() || (right - left == oldRight - oldLeft && bottom - top == oldBottom - oldTop)) return;
+            view.post(() -> {
+                if (!view.hasFocus()) return;
+                android.view.ViewParent parent = view.getParent();
+                if (!(parent instanceof ViewGroup)) return;
+                SharedFocusController controller;
+                synchronized (sharedFocusControllers) {
+                    controller = sharedFocusControllers.get((ViewGroup) parent);
+                }
+                if (controller != null) controller.moveTo(view, radiusDp);
+            });
+        });
     }
 
     /** PS5-style settings focus: one shared frame slides to the focused row and resizes to its measured height. */
