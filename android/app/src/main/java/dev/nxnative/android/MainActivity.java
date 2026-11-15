@@ -714,7 +714,7 @@ public final class MainActivity extends Activity {
                 }
             });
         } else {
-            GameArtwork.load(new File(g.gameDir), art -> {
+            GameArtwork.load(this, new File(g.gameDir), art -> {
                 android.graphics.Bitmap image = art.icon != null ? art.icon : art.background;
                 if (tile.getParent() != null && image != null) {
                     cover.setImageBitmap(image);
@@ -775,7 +775,7 @@ public final class MainActivity extends Activity {
         homeArtworkView.setImageDrawable(null);
         homeArtworkView.setAlpha(0f);
         String path = game.gameDir;
-        GameArtwork.load(new File(path), art -> {
+        GameArtwork.load(this, new File(path), art -> {
             if (homeArtworkView == null || selectedHomeGame == null || !path.equals(selectedHomeGame.gameDir) || art.background == null) return;
             homeArtworkView.setImageBitmap(art.background);
             homeArtworkView.animate().alpha(0.48f).setDuration(500).start();
