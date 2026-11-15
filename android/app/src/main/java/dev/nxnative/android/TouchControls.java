@@ -47,6 +47,60 @@ final class TouchControls extends View {
     private int mode = MODE_AUTO;   // the "On-screen controls" setting (setMode)
     private float opacity, scale;
     private boolean haptics;
+    private int theme = THEME_CLASSIC;
+
+    static final int THEME_CLASSIC = 0, THEME_PLAYSTATION = 1, THEME_XBOX = 2, THEME_NINTENDO = 3, THEME_NEON = 4;
+    static final String[] THEME_NAMES = {"Classic", "PlayStation", "Xbox", "Nintendo", "Neon"};
+
+    static int theme(Context c) {
+        int value = Prefs.open(c, "touch_controls").getInt("theme", THEME_CLASSIC);
+        return value >= 0 && value < THEME_NAMES.length ? value : THEME_CLASSIC;
+    }
+
+    static void theme(Context c, int value) {
+        int safe = value >= 0 && value < THEME_NAMES.length ? value : THEME_CLASSIC;
+        Prefs.open(c, "touch_controls").edit().putInt("theme", safe).commit();
+    }
+
+    void setTheme(int value) {
+        theme = value >= 0 && value < THEME_NAMES.length ? value : THEME_CLASSIC;
+        theme(getContext(), theme);
+        invalidate();
+    }
+
+    private int themeFill() {
+        switch (theme) {
+            case THEME_PLAYSTATION: return Color.rgb(7, 24, 48);
+            case THEME_XBOX: return Color.rgb(7, 31, 18);
+            case THEME_NINTENDO: return Color.rgb(45, 10, 15);
+            case THEME_NEON: return Color.rgb(24, 10, 42);
+            default: return Color.BLACK;
+        }
+    }
+
+    private int themeLine() {
+        switch (theme) {
+            case THEME_PLAYSTATION: return Color.rgb(75, 164, 255);
+            case THEME_XBOX: return Color.rgb(61, 220, 126);
+            case THEME_NINTENDO: return Color.rgb(255, 83, 99);
+            case THEME_NEON: return Color.rgb(190, 112, 255);
+            default: return Color.WHITE;
+        }
+    }
+
+    private int themeAccent() {
+        switch (theme) {
+            case THEME_PLAYSTATION: return Color.rgb(43, 137, 255);
+            case THEME_XBOX: return Color.rgb(16, 124, 65);
+            case THEME_NINTENDO: return Color.rgb(230, 0, 18);
+            case THEME_NEON: return Color.rgb(36, 225, 211);
+            default: return Color.WHITE;
+        }
+    }
+
+    private int themeText() {
+        return theme == THEME_NEON ? Color.rgb(248, 238, 255) : Color.WHITE;
+    }
 
     // The layout in pixels, as the host has it
     private int n;
@@ -101,6 +155,7 @@ final class TouchControls extends View {
         opacity = prefs().getFloat("opacity", 0.6f);
         scale = prefs().getFloat("scale", 1f);
         haptics = prefs().getBoolean("haptics", true);
+        theme = theme(c);
         shown = prefs().getBoolean("shown", true);
         line.setStyle(Paint.Style.STROKE);
         text.setTextAlign(Paint.Align.CENTER);
@@ -521,8 +576,10 @@ final class TouchControls extends View {
     private void drawControls(Canvas c) {
         for (int i = 0; i < n; i++) {
             boolean held = pressed[i] != 0;
-            fill.setColor(held ? Color.argb(alpha(0.55f), 255, 255, 255) : Color.argb(alpha(0.35f), 0, 0, 0));
-            line.setColor(Color.argb(alpha(0.9f), 255, 255, 255));
+            int edge = themeLine(), base = themeFill(), accent = themeAccent();
+            fill.setColor(held ? Color.argb(alpha(0.62f), Color.red(accent), Color.green(accent), Color.blue(accent))
+                    : Color.argb(alpha(0.35f), Color.red(base), Color.green(base), Color.blue(base)));
+            line.setColor(Color.argb(alpha(0.95f), Color.red(edge), Color.green(edge), Color.blue(edge)));
             if (kind[i] == STICK) drawStick(c, i);
             else if (kind[i] == DPAD) drawDpad(c, i);
             else {
@@ -534,7 +591,8 @@ final class TouchControls extends View {
                     c.drawCircle(cx[i], cy[i], r[i], fill);
                     c.drawCircle(cx[i], cy[i], r[i], line);
                 }
-                text.setColor(held ? Color.argb(alpha(1f), 0, 0, 0) : Color.argb(alpha(1f), 255, 255, 255));
+                int ink = held ? themeText() : themeText();
+                text.setColor(Color.argb(alpha(1f), Color.red(ink), Color.green(ink), Color.blue(ink)));
                 text.setTextSize(r[i] * (label[i].length() > 1 ? 0.72f : 0.95f));
                 c.drawText(label[i], cx[i], cy[i] - (text.descent() + text.ascent()) / 2, text);
             }
@@ -579,19 +637,24 @@ final class TouchControls extends View {
     private void drawStick(Canvas c, int i) {
         float sx = sticks[2 * stick[i]], sy = sticks[2 * stick[i] + 1];
         boolean held = sx != 0 || sy != 0;
-        fill.setColor(Color.argb(alpha(0.25f), 0, 0, 0));
+        int base = themeFill(), edge = themeLine(), accent = themeAccent();
+        fill.setColor(Color.argb(alpha(0.28f), Color.red(base), Color.green(base), Color.blue(base)));
         c.drawCircle(cx[i], cy[i], r[i], fill);
+        line.setColor(Color.argb(alpha(0.95f), Color.red(edge), Color.green(edge), Color.blue(edge)));
         c.drawCircle(cx[i], cy[i], r[i], line);
         float k = r[i] * 0.55f, kx = cx[i] + sx * k, ky = cy[i] - sy * k;
-        fill.setColor(held ? Color.argb(alpha(0.6f), 255, 255, 255) : Color.argb(alpha(0.4f), 90, 90, 90));
+        fill.setColor(held ? Color.argb(alpha(0.78f), Color.red(accent), Color.green(accent), Color.blue(accent))
+                : Color.argb(alpha(0.48f), Color.red(edge), Color.green(edge), Color.blue(edge)));
         c.drawCircle(kx, ky, r[i] * 0.45f, fill);
         c.drawCircle(kx, ky, r[i] * 0.45f, line);
     }
 
     private void drawDpad(Canvas c, int i) {
         float x = cx[i], y = cy[i], rr = r[i], w = rr * 0.36f;
-        fill.setColor(Color.argb(alpha(0.25f), 0, 0, 0));
+        int base = themeFill(), edge = themeLine(), accent = themeAccent();
+        fill.setColor(Color.argb(alpha(0.28f), Color.red(base), Color.green(base), Color.blue(base)));
         c.drawCircle(x, y, rr, fill);
+        line.setColor(Color.argb(alpha(0.95f), Color.red(edge), Color.green(edge), Color.blue(edge)));
         c.drawCircle(x, y, rr, line);
         long[] dirs = {UP, RIGHT, DOWN, LEFT};
         for (int k = 0; k < 4; k++) {
@@ -605,7 +668,8 @@ final class TouchControls extends View {
                 if (j == 0) path.moveTo(x + px, y + py); else path.lineTo(x + px, y + py);
             }
             path.close();
-            fill.setColor(held ? Color.argb(alpha(0.9f), 255, 255, 255) : Color.argb(alpha(0.35f), 255, 255, 255));
+            fill.setColor(held ? Color.argb(alpha(0.95f), Color.red(accent), Color.green(accent), Color.blue(accent))
+                    : Color.argb(alpha(0.55f), Color.red(edge), Color.green(edge), Color.blue(edge)));
             c.drawPath(path, fill);
         }
     }
@@ -617,6 +681,21 @@ final class TouchControls extends View {
 
     /** The on-screen controls' rows of the in-game panel: Auto / On / Off, opacity, size, the haptic tick, the log over the game, Reset and the layout editor; each applies at once (kept for every game) */
     void controlRows(Context ctx, LinearLayout box) {
+        TextView themeLabel = new TextView(ctx);
+        themeLabel.setText("Joystick theme");
+        box.addView(themeLabel);
+        RadioGroup tg = new RadioGroup(ctx);
+        tg.setOrientation(RadioGroup.VERTICAL);
+        for (int i = 0; i < THEME_NAMES.length; i++) {
+            RadioButton b = new RadioButton(ctx);
+            b.setId(4100 + i);
+            b.setText(THEME_NAMES[i]);
+            tg.addView(b);
+        }
+        tg.check(4100 + theme);
+        tg.setOnCheckedChangeListener((g, id) -> setTheme(id - 4100));
+        box.addView(tg);
+
         RadioGroup mg = new RadioGroup(ctx);
         mg.setOrientation(RadioGroup.HORIZONTAL);
         for (int i = 0; i < MODE_NAMES.length; i++) { RadioButton b = new RadioButton(ctx); b.setId(4000 + i); b.setText(MODE_NAMES[i]); mg.addView(b); }
