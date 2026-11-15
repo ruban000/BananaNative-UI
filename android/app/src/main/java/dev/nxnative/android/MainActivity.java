@@ -773,7 +773,7 @@ public final class MainActivity extends Activity {
         heading.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView status = Ui.status(this, Profile.of(game.titleId) == null ? "Not supported" : "Checking…", R.color.bn_text_2);
         status.setTextColor(Profile.of(game.titleId) == null ? 0xFFFFA0A0 : 0xFFB9E9D0);
-        Ui.pill(status).setBackground(Ui.round(0x443A9B70, dp(999), 0x6672C99A, dp(1)));
+        Ui.pill(status).setBackground(Ui.round(0x44232F46, dp(999), 0x667D96B7, dp(1)));
         LinearLayout.LayoutParams statusLp = Ui.wrap();
         statusLp.leftMargin = dp(12);
         heading.addView(status, statusLp);
