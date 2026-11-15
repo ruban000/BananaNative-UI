@@ -942,7 +942,12 @@ public final class MainActivity extends Activity {
         Ui.pill(st).setBackground(Ui.round(0xFF18385D, dp(999), 0xFF315A83, dp(1)));
         info.addView(st, sp);
         top.addView(info, Ui.weight());
-        top.addView(Ui.more(this, "Options for " + g.name, v -> homeOptions(g, v)));
+        // Keep the Home options tap independent from the card's click/focus handlers.
+        // Ui.more installs the shared PS5 focus animation; replace only its wrapped click
+        // listener so a touchscreen tap always opens the four-action sheet directly.
+        ImageView optionsButton = Ui.more(this, "Options for " + g.name, null);
+        optionsButton.setOnClickListener(v -> homeOptions(g, v));
+        top.addView(optionsButton);
         c.addView(top);
         item.addView(c, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         Ui.Action play = Ui.action(this, R.drawable.ic_play, "Play", Ui.Kind.PRIMARY, v -> launch(g));
