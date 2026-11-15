@@ -407,7 +407,18 @@ final class SidePanel extends FrameLayout {
             TextView t = (TextView) v;
             if (text != 1f) t.setTextSize(TypedValue.COMPLEX_UNIT_PX, t.getTextSize() * text);
             if (v instanceof Button || v instanceof CompoundButton) t.setMinHeight(row);
-        } else if (v instanceof SeekBar) v.setMinimumHeight(row);
+            if (v instanceof Button || v instanceof CompoundButton) t.setTextColor(0xFFF1F5FA);
+            if (v instanceof CompoundButton) {
+                int[][] states = new int[][] { new int[] { android.R.attr.state_checked }, new int[] {} };
+                int[] colors = new int[] { 0xFFDCEBFF, 0xFF9AA9BC };
+                ((CompoundButton) v).setButtonTintList(new android.content.res.ColorStateList(states, colors));
+            }
+        } else if (v instanceof SeekBar) {
+            v.setMinimumHeight(row);
+            ((SeekBar) v).setProgressTintList(android.content.res.ColorStateList.valueOf(0xFFDCEBFF));
+            ((SeekBar) v).setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFF4F7FC));
+            ((SeekBar) v).setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0x557C8FA8));
+        }
         if (v instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) v).getChildCount(); i++) look(((ViewGroup) v).getChildAt(i), text, row);
     }
 
@@ -432,6 +443,7 @@ final class SidePanel extends FrameLayout {
         TextView h = new TextView(act);
         h.setText(t);
         h.setTypeface(Typeface.DEFAULT_BOLD);
+        h.setTextColor(0xFFEAF1FA);
         h.setTextSize(15);
         h.setPadding(0, Math.round(18 * getResources().getDisplayMetrics().density), 0, 0);
         box.addView(h);
@@ -442,7 +454,7 @@ final class SidePanel extends FrameLayout {
         TextView n = new TextView(act);
         n.setText(t);
         n.setTextSize(12);
-        n.setTextColor(Color.LTGRAY);
+        n.setTextColor(0xFFA4B1C2);
         box.addView(n);
         return n;
     }
@@ -596,7 +608,6 @@ final class SidePanel extends FrameLayout {
                 .setMessage("The game will close and return to Banana Native. Unsaved progress may be lost.")
                 .setPositiveButton("Stop game", (d, w) -> {
                     Native.note("stopped by the user");
-                    ExitWatch.stopped();
                     if (act instanceof GameActivity) ((GameActivity) act).stopFromPanel();
                     else act.finish();
                 })
