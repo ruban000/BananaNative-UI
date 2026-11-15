@@ -1218,8 +1218,7 @@ public final class MainActivity extends Activity {
                 + "\nShaders: " + (lp == null ? "present (" + BuildConfig.NX_DMSH_VK_CHAIN + ")" : lp) + "\nSaves: " + (save != null ? save.getPath() : "not set"));
         info.text.setTextSize(12);
         Ui.add(content, info, 8);
-        Ui.add(content, Ui.divider(this), 12, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
-        Ui.add(content, Ui.button(this, "Remove from list", Ui.Kind.DANGER, v -> { page(false); confirmRemove(g); }), 12, Ui.wrap());
+
     }
 
     private void openAccessSettings() {
