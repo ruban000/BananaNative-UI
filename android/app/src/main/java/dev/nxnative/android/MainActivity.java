@@ -1158,14 +1158,18 @@ public final class MainActivity extends Activity {
         }, "nx-pack-check").start();
     }
 
-    /** Home card ⋯: show an anchored menu; never open settings until that row is selected. */
+    /** Home card ⋯: show the four Home actions first; only the settings row opens GameSettings. */
     private void homeOptions(Game g, View anchor) {
-        android.widget.PopupMenu menu = new android.widget.PopupMenu(this, anchor);
-        menu.getMenu().add("Background").setOnMenuItemClickListener(item -> { pickHomeArtwork(g, true); return true; });
-        menu.getMenu().add("Icon").setOnMenuItemClickListener(item -> { pickHomeArtwork(g, false); return true; });
-        menu.getMenu().add("Per-game settings").setOnMenuItemClickListener(item -> { manage(g); return true; });
-        menu.getMenu().add("Remove from list").setOnMenuItemClickListener(item -> { removeGameFromList(g); return true; });
-        menu.show();
+        Ui.choiceSheet(this, "Options for " + g.name, "Choose an action for this game",
+                new String[]{"Background", "Icon", "Per-game settings", "Remove from list"}, -1,
+                choice -> {
+                    switch (choice) {
+                        case 0: pickHomeArtwork(g, true); break;
+                        case 1: pickHomeArtwork(g, false); break;
+                        case 2: manage(g); break;
+                        case 3: removeGameFromList(g); break;
+                    }
+                });
     }
 
     /** The game's Manage sheet, also from its progress card's ⋯ while it is being prepared (Ondevice) */
