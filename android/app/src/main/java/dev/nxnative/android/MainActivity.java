@@ -203,6 +203,15 @@ public final class MainActivity extends Activity {
         play.addView(touch.view);
         play.addView(new Ui.Setting(this, "🔘", "Show / hide button", null).toggle(this, TouchControls.toggleButton(this), (b, on) -> TouchControls.toggleButton(this, on))
                 .value("The small button at the top centre that hides the on-screen controls").view);
+        Ui.Setting joystickTheme = new Ui.Setting(this, "🕹️", "Joystick theme", null).chevron(this);
+        joystickTheme.view.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("On-screen joystick theme")
+                .setSingleChoiceItems(TouchControls.THEME_NAMES, TouchControls.theme(this), (d, w) -> {
+                    TouchControls.theme(this, w);
+                    joystickTheme.value(TouchControls.THEME_NAMES[w]);
+                    d.dismiss();
+                }).setNegativeButton("Cancel", null).show());
+        joystickTheme.value(TouchControls.THEME_NAMES[TouchControls.theme(this)]);
+        play.addView(joystickTheme.view);
         // How a controller opens the in-game panel (PadPanel); the panel opens by touch with a swipe in from the right edge or Back
         Ui.Setting padPanel = new Ui.Setting(this, "🎛️", "Controller: in-game panel", null).chevron(this);
         padPanel.view.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Open the in-game panel with a controller")
