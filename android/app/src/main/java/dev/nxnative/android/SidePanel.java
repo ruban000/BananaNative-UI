@@ -80,12 +80,14 @@ final class SidePanel extends FrameLayout {
     private static final int ID_SIZE = 5000, ID_TEXT = 5100, ID_FIT = 5200, ID_MAP = 5300, ID_ONE = 5400, ID_RES = 5500, ID_RES_PRESET = 5590;
 
     /** A deep navy glass-like surface for the in-game overlay. */
-    private static GradientDrawable makePanelBackground() {
+    private float actDensityPlaceholder() { return getResources().getDisplayMetrics().density; }
+
+    private GradientDrawable makePanelBackground() {
         GradientDrawable bg = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[] {0xF20D1726, 0xF20A111D, 0xF2101D2D});
-        bg.setCornerRadius(0);
-        bg.setStroke(1, 0x447F9BB8);
+                new int[] {0xF51A1730, 0xF20B1422, 0xF20D1A2B});
+        bg.setCornerRadius(22 * actDensityPlaceholder());
+        bg.setStroke(1, 0x557F9BB8);
         return bg;
     }
 
@@ -134,14 +136,22 @@ final class SidePanel extends FrameLayout {
         // Exit is a floating action at the lower-right, away from the tab navigation.
         brand.setBackgroundColor(0xD90F1B2B);
         content.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(66 * dp)));
+        LinearLayout body = new LinearLayout(a);
+        body.setOrientation(LinearLayout.HORIZONTAL);
+        body.setBackgroundColor(0x00000000);
         tabs = new LinearLayout(a);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackgroundColor(0xB30A111D);
-        content.addView(tabs, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.round(58 * dp)));
+        tabs.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable railBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[] {0xE91A1835, 0xE90D1727, 0xE90B1422});
+        tabs.setBackground(railBg);
+        tabs.setPadding(Math.round(5 * dp), Math.round(10 * dp), Math.round(5 * dp), Math.round(10 * dp));
+        body.addView(tabs, new LinearLayout.LayoutParams(Math.round(76 * dp), LayoutParams.MATCH_PARENT));
         scroll.setClipToPadding(false);
         scroll.setFillViewport(false);
-        scroll.setPadding(0, 0, 0, Math.round(92 * dp)); // reserve room for the floating exit action
-        content.addView(scroll, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        scroll.setBackgroundColor(0x00000000);
+        scroll.setPadding(Math.round(14 * dp), Math.round(8 * dp), Math.round(14 * dp), Math.round(22 * dp));
+        body.addView(scroll, new LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f));
+        content.addView(body, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
         sh.addView(content, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         TextView exit = new TextView(a);
         exit.setText("↗");
@@ -164,48 +174,10 @@ final class SidePanel extends FrameLayout {
         // Anchor the floating action to the panel's left edge; half the circle sits outside over the game.
         exitLp.setMargins(0, 0, Math.max(0, panelWidth - exitSize / 2), Math.round(22 * dp));
         addView(exit, exitLp);
-        final boolean[] tabsHidden = {false};
-        final int[] scrollDirection = {0};
-        final int[] directionTravel = {0};
-        final boolean[] tabsAnimating = {false};
-        final int directionThreshold = Math.round(14 * dp);
+        // Navigation rail is fixed; only the settings column scrolls. No hide/show animation
+        // means scroll direction changes cannot cause layout jumps or visual jitter.
         scroll.setOnScrollChangeListener((View v, int sx, int sy, int oldSx, int oldSy) -> {
-            int delta = sy - oldSy;
-            if (Math.abs(delta) > 0) {
-                int direction = delta > 0 ? 1 : -1;
-                if (direction != scrollDirection[0]) {
-                    scrollDirection[0] = direction;
-                    directionTravel[0] = 0;
-                }
-                directionTravel[0] += Math.abs(delta);
-            }
-            if (!tabsAnimating[0] && directionTravel[0] >= directionThreshold) {
-                boolean shouldHide = scrollDirection[0] > 0 && sy > Math.round(40 * dp);
-                boolean shouldReveal = scrollDirection[0] < 0;
-                directionTravel[0] = 0;
-                if (shouldHide && !tabsHidden[0]) {
-                    tabsHidden[0] = true;
-                    tabsAnimating[0] = true;
-                    tabs.animate().cancel();
-                    tabs.animate().alpha(0f).translationY(-tabs.getHeight()).setDuration(170)
-                            .withEndAction(() -> {
-                                tabs.setVisibility(INVISIBLE); // keep its layout space: no scroll-range jump
-                                tabsAnimating[0] = false;
-                            }).start();
-                } else if (shouldReveal && tabsHidden[0]) {
-                    tabsHidden[0] = false;
-                    tabsAnimating[0] = true;
-                    tabs.setVisibility(VISIBLE);
-                    tabs.setAlpha(0f);
-                    tabs.setTranslationY(-tabs.getHeight());
-                    tabs.animate().alpha(1f).translationY(0f).setDuration(190)
-                            .withEndAction(() -> tabsAnimating[0] = false).start();
-                }
-            }
-            boolean compact = sy > Math.round(72 * dp);
-            brand.animate().alpha(compact ? 0.78f : 1f)
-                    .translationY(compact ? -Math.round(5 * dp) : 0).setDuration(160).start();
-            tabs.setElevation(compact ? 8 * dp : 2 * dp);
+            brandTitle.setAlpha(sy > Math.round(72 * dp) ? 0.92f : 1f);
         });
         addView(sh, new LayoutParams(panelWidth, LayoutParams.MATCH_PARENT, Gravity.END));
         sheet = sh;
@@ -369,62 +341,56 @@ final class SidePanel extends FrameLayout {
     private void tabBar() {
         tabs.removeAllViews();
         float dp = getResources().getDisplayMetrics().density;
-        int h = Math.max(Math.round(58 * dp), PanelLook.rowPx(Prefs.panelSize(act), dp)), pad = Math.round(3 * dp);
+        int itemHeight = Math.round(66 * dp);
+        int pad = Math.round(3 * dp);
+        String[] glyphs = {"◷", "▣", "⌖", "☷"};
         for (int i = 0; i < TAB_NAMES.length; i++) {
             int k = i;
             boolean on = i == tab;
-            TextView t = new TextView(act);
-            String[] glyphs = {"◷", "▣", "⌖", "☷"};
-            t.setText(glyphs[i] + "\n" + TAB_NAMES[i]);
-            t.setGravity(Gravity.CENTER);
-            t.setMaxLines(2);
-            t.setIncludeFontPadding(false);
-            t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);   // compact icon-and-label navigation
-            t.setPadding(pad, 0, pad, 0);
-            t.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-            t.setTextColor(on ? 0xFFFFFFFF : 0xFF9EADBF);
-            GradientDrawable tabBg = new GradientDrawable();
-            tabBg.setCornerRadius(14 * dp);
-            tabBg.setColor(on ? 0x263E6B91 : 0x000A111D);
-            tabBg.setStroke(Math.max(1, Math.round(dp)), on ? 0x667FA8D2 : 0x00000000);
-            t.setBackground(tabBg);
-            t.setPadding(pad, Math.round(5 * dp), pad, Math.round(5 * dp));
-            t.setSelected(on);
-            t.setFocusable(true);
-
-            t.setOnClickListener(v -> { animateTap(v); showTab(k); });
-            t.setContentDescription(TAB_NAMES[i] + " tab, " + (i + 1) + " of " + TAB_NAMES.length + (on ? ", selected" : ""));
-            tabs.addView(t, new LinearLayout.LayoutParams(0, h, 1f));
+            TextView item = new TextView(act);
+            item.setText(glyphs[i] + "\\n" + TAB_NAMES[i]);
+            item.setGravity(Gravity.CENTER);
+            item.setMaxLines(2);
+            item.setIncludeFontPadding(false);
+            item.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            item.setLineSpacing(0, 0.92f);
+            item.setPadding(pad, Math.round(7 * dp), pad, Math.round(7 * dp));
+            item.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            item.setTextColor(on ? 0xFFFFFFFF : 0xFF9EADBF);
+            GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    on ? new int[] {0x654C3D91, 0x55305D9B} : new int[] {0x00000000, 0x00000000});
+            bg.setCornerRadius(13 * dp);
+            bg.setStroke(Math.max(1, Math.round(dp)), on ? 0x887E9DFF : 0x00000000);
+            item.setBackground(bg);
+            item.setSelected(on);
+            item.setFocusable(true);
+            item.setOnClickListener(v -> { animateTap(v); showTab(k); });
+            item.setContentDescription(TAB_NAMES[i] + " tab, " + (i + 1) + " of " + TAB_NAMES.length + (on ? ", selected" : ""));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, itemHeight);
+            lp.bottomMargin = Math.round(5 * dp);
+            tabs.addView(item, lp);
         }
+
+        View spacer = new View(act);
+        tabs.addView(spacer, new LinearLayout.LayoutParams(1, 0, 1f));
         TextView x = new TextView(act);
         x.setText("×");
         x.setGravity(Gravity.CENTER);
-        x.setTextSize(18);
+        x.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
         x.setTextColor(0xFFE8EAED);
         x.setFocusable(true);
-
+        x.setBackground(makeRailActionBackground(dp));
         x.setOnClickListener(v -> close());
         x.setContentDescription("Close the panel, back to the game");
-        tabs.addView(x, new LinearLayout.LayoutParams(h, h));
-        tabs.post(this::tabTextSize);
+        tabs.addView(x, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(50 * dp)));
     }
 
-    /** One text size for all tab labels: the largest (16 sp at most, 10 at least) at which the widest label, in bold as when selected, fits its tab.
-     *  Auto-sizing each label on its own shrank "Performance" alone and set it lower than the others */
-    private void tabTextSize() {
-        if (tabs.getChildCount() <= TAB_NAMES.length) return;
-        float sp = getResources().getDisplayMetrics().scaledDensity, fit = 11;
-        android.graphics.Paint p = new android.graphics.Paint();
-        p.setTypeface(Typeface.DEFAULT_BOLD);
-        p.setTextSize(11 * sp);
-        for (int i = 0; i < TAB_NAMES.length; i++) {
-            TextView t = (TextView) tabs.getChildAt(i);
-            int room = t.getWidth() - t.getPaddingLeft() - t.getPaddingRight();
-            float w = p.measureText(TAB_NAMES[i]);
-            if (room > 0 && w > room) fit = Math.min(fit, 11 * room / w);
-        }
-        float size = Math.max(9, (float) Math.floor(fit * 2) / 2);
-        for (int i = 0; i < TAB_NAMES.length; i++) ((TextView) tabs.getChildAt(i)).setTextSize(TypedValue.COMPLEX_UNIT_SP, size);
+    private GradientDrawable makeRailActionBackground(float dp) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0x221B2B42);
+        bg.setCornerRadius(13 * dp);
+        bg.setStroke(Math.max(1, Math.round(dp)), 0x447F9BB8);
+        return bg;
     }
 
     /** Another tab: its rows built, scrolled to its top; with a controller the focus on its first row */
