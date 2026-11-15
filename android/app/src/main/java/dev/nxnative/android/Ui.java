@@ -1526,13 +1526,7 @@ final class Ui {
             // Keep one glass panel only: the window owns the surface, not the nested scroll container.
             android.view.ViewParent contentParent = options.getParent();
             if (contentParent instanceof View) ((View) contentParent).setBackgroundColor(Color.TRANSPARENT);
-            TextView heading = dialog[0].findViewById(android.R.id.alertTitle);
-            if (heading != null) {
-                heading.setTextColor(Color.WHITE);
-                heading.setTextSize(19);
-                heading.setTypeface(face(700));
-                heading.setPadding(dp(a, 24), dp(a, 20), dp(a, 24), dp(a, 8));
-            }
+            // Keep the platform title view untouched here; this app's Android SDK stubs do not expose alertTitle.
             if (dialog[0].getWindow() != null) {
                 android.graphics.drawable.GradientDrawable dialogBg = new android.graphics.drawable.GradientDrawable(
                         android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
