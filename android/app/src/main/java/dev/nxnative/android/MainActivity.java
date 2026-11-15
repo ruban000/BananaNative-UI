@@ -23,6 +23,8 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -43,7 +45,7 @@ import java.util.Locale;
  * readable width, centered on a wide window. The activity handles rotation itself (configChanges), so a size change builds the page again (onConfigurationChanged).
  */
 public final class MainActivity extends Activity {
-    private static final int PICK_GAME = 1, PICK_PACK = 2, PICK_DLL = 3, PICK_DRIVER = 4, PICK_NUP = 5, PICK_NUP_HERE = 6;
+    private static final int PICK_GAME = 1, PICK_PACK = 2, PICK_DLL = 3, PICK_DRIVER = 4, PICK_NUP = 5, PICK_NUP_HERE = 6, PICK_HOME_ICON = 7, PICK_HOME_BACKGROUND = 8;
 
     private final List<Game> games = new ArrayList<>();
     private LinearLayout gameBox;   // the game cards (refresh)
@@ -61,6 +63,7 @@ public final class MainActivity extends Activity {
     private File pendingGame;   // a game folder (or .nup) waiting for its pack folder
     private String pendingId;
     private File pendingPackPick;   // the pack folder the user just picked (remembered in Prefs once it is accepted)
+    private Game pendingArtworkGame;
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -1155,8 +1158,17 @@ public final class MainActivity extends Activity {
     /** The game's Manage sheet, also from its progress card's ⋯ while it is being prepared (Ondevice) */
     void manageGame(Game g) { manage(g); }
 
-    /** A game's page (⋯ on its card, or a long press; GameSettings): its settings, saves and storage under tabs, Play in its header */
+    /** A game's page (⋯ on Home): its settings, home artwork, saves and storage under tabs. */
     private void manage(Game g) { GameSettings.open(this, g); }
+
+    void pickHomeArtwork(Game g, boolean background) {
+        pendingArtworkGame = g;
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(pick, background ? PICK_HOME_BACKGROUND : PICK_HOME_ICON);
+    }
+
+    void removeGameFromList(Game g) { page(false); confirmRemove(g); }
 
     /**
      * A game's page, its Saves tab (save backups in &lt;Switch2&gt;/save-backups/&lt;id&gt;/, verified; a restore backs up the current save first: SaveUi, SaveStore) or its
@@ -1357,6 +1369,10 @@ public final class MainActivity extends Activity {
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         if (Ondevice.activityResult(this, request, result, data)) return;
+        if ((request == PICK_HOME_ICON || request == PICK_HOME_BACKGROUND) && result == RESULT_OK && data != null && data.getData() != null) {
+            saveHomeArtwork(data.getData(), request == PICK_HOME_BACKGROUND);
+            return;
+        }
         if (request == ReadinessActivity.REQUEST) { if (result == ReadinessActivity.FIX_DRIVER) GpuDriver.dialog(this, PICK_DRIVER); return; }   // its "Pick a GPU driver"
         if (result != RESULT_OK || data == null || data.getData() == null) return;
         if (request == PICK_DRIVER) { GpuDriver.picked(this, data.getData()); return; }
@@ -1602,7 +1618,46 @@ public final class MainActivity extends Activity {
         return null;
     }
 
-    /** Remove from the list (the Manage sheet): says exactly what goes (the list entry) and what stays (the folders and the saves) */
+    private void saveHomeArtwork(Uri uri, boolean background) {
+        Game target = pendingArtworkGame;
+        pendingArtworkGame = null;
+        if (target == null) return;
+        new Thread(() -> {
+            File saved = null;
+            String error = null;
+            try (InputStream in = getContentResolver().openInputStream(uri)) {
+                if (in == null) throw new IOException("The selected image could not be opened.");
+                File dir = new File(getFilesDir(), "home-artwork");
+                if (!dir.exists() && !dir.mkdirs()) throw new IOException("Could not create the artwork folder.");
+                String mime = getContentResolver().getType(uri);
+                String ext = mime != null && mime.toLowerCase(Locale.ROOT).contains("png") ? ".png"
+                        : mime != null && mime.toLowerCase(Locale.ROOT).contains("webp") ? ".webp" : ".jpg";
+                saved = new File(dir, target.titleId + (background ? "-background" : "-icon") + ext);
+                try (FileOutputStream out = new FileOutputStream(saved)) {
+                    byte[] buffer = new byte[16384]; int n; long total = 0;
+                    while ((n = in.read(buffer)) != -1) {
+                        total += n;
+                        if (total > 32L * 1024L * 1024L) throw new IOException("Choose an image smaller than 32 MB.");
+                        out.write(buffer, 0, n);
+                    }
+                }
+                android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
+                bounds.inJustDecodeBounds = true;
+                android.graphics.BitmapFactory.decodeFile(saved.getAbsolutePath(), bounds);
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw new IOException("That file is not a supported image.");
+                GameArtwork.setOverride(this, target.titleId, background, saved.getAbsolutePath());
+            } catch (Exception e) { error = e.getMessage(); if (saved != null) saved.delete(); }
+            String problem = error;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (problem != null) { error("Artwork not changed: " + problem); return; }
+                Toast.makeText(this, background ? "Home background updated" : "Game icon updated", Toast.LENGTH_SHORT).show();
+                refresh();
+            });
+        }, "nx-home-artwork").start();
+    }
+
+    /** Remove from the list: says exactly what goes (the list entry) and what stays (the folders and the saves) */
     private void confirmRemove(Game g) {
         File save = Folders.save(this, g);
         if (CopyPlan.isCopy(AppStorage.root(this), g.gameDir)) { confirmRemoveCopy(g, save); return; }
