@@ -846,6 +846,9 @@ public final class GameActivity extends Activity implements SurfaceHolder.Callba
                 .setPositiveButton("OK", (d, w) -> end()).setCancelable(false).show();
     }
 
+    /** The in-game panel's explicit power/stop action. */
+    void stopFromPanel() { end(); }
+
     private void end() {
         ExitWatch.stopped();
         backToFrontend();

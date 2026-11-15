@@ -17,6 +17,9 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Button;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 
 import java.util.Arrays;
 
@@ -651,14 +654,17 @@ final class TouchControls extends View {
         ss.setOnSeekBarChangeListener(live);
         hb.setOnCheckedChangeListener((b, v) -> { haptics = v; save(); });
         lb.setOnCheckedChangeListener((b, v) -> prefs().edit().putBoolean("log", v).commit());
-        android.widget.Button reset = new android.widget.Button(ctx);
-        reset.setText("Reset the controls");
+        Button reset = new Button(ctx);
+        reset.setText("↻   Reset the controls");
+        stylePanelAction(reset, ctx, false);
         reset.setOnClickListener(v -> { os.setProgress(50); ss.setProgress(40); hb.setChecked(true); });   // 60 % opacity, 100 % size, the tick on
-        box.addView(ol); box.addView(os); box.addView(sl); box.addView(ss); box.addView(hb); box.addView(lb); box.addView(tb); box.addView(reset);
-        android.widget.Button ed = new android.widget.Button(ctx);   // the layout editor (runs onEditStart); the picture's position is in the panel's Picture rows (positionRows)
-        ed.setText("Customize controls layout…");
+        box.addView(ol); box.addView(os); box.addView(sl); box.addView(ss); box.addView(hb); box.addView(lb); box.addView(tb);
+        addPanelAction(box, reset, ctx);
+        Button ed = new Button(ctx);   // the layout editor (runs onEditStart); the picture's position is in the panel's Picture rows (positionRows)
+        ed.setText("✥   Customize controls layout…");
+        stylePanelAction(ed, ctx, true);
         ed.setOnClickListener(v -> startEditLayout());
-        box.addView(ed);
+        addPanelAction(box, ed, ctx);
         TextView editHint = new TextView(ctx);
         editHint.setText("Drag a control group to move it, or pinch to resize it. Your layout is saved for this screen shape.");
         editHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
@@ -667,6 +673,46 @@ final class TouchControls extends View {
     }
 
     /** Whether GameActivity keeps the newest log lines over the picture once the game draws (off by default; the settings dialog's last box) */
+    /** Glass action buttons used by the in-game side panel. */
+    private static void stylePanelAction(Button button, Context ctx, boolean primary) {
+        float dp = ctx.getResources().getDisplayMetrics().density;
+        GradientDrawable bg = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                primary
+                        ? new int[] {0xCC25366A, 0xCC142C50, 0xCC10243D}
+                        : new int[] {0xAA252A49, 0xCC17263D, 0xCC101D30});
+        bg.setCornerRadius(18 * dp);
+        bg.setStroke(Math.max(1, Math.round(dp)), primary ? 0x997D9EFF : 0x667F9BB8);
+        button.setBackground(bg);
+        button.setTextColor(0xFFF0F5FF);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        button.setAllCaps(false);
+        button.setGravity(android.view.Gravity.CENTER);
+        button.setMinHeight(Math.round(52 * dp));
+        button.setPadding(Math.round(16 * dp), Math.round(11 * dp), Math.round(16 * dp), Math.round(11 * dp));
+        button.setStateListAnimator(null);
+        button.setElevation(0);
+        button.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                v.animate().cancel();
+                v.animate().scaleX(0.985f).scaleY(0.985f).setDuration(80).start();
+            } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                v.animate().scaleX(1f).scaleY(1f).setDuration(140).start();
+            }
+            return false;
+        });
+    }
+
+    private static void addPanelAction(LinearLayout box, Button button, Context ctx) {
+        float dp = ctx.getResources().getDisplayMetrics().density;
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = Math.round(9 * dp);
+        lp.bottomMargin = Math.round(3 * dp);
+        box.addView(button, lp);
+    }
+
     static boolean showLog(Context c) { return Prefs.open(c, "touch_controls").getBoolean("log", false); }
 
     private void save() { prefs().edit().putFloat("opacity", opacity).putFloat("scale", scale).putBoolean("haptics", haptics).commit(); }

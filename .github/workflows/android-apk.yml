@@ -1,17 +1,13 @@
 name: Android APK
+# Persistent signing uses NX_KEYSTORE_BASE64, NX_KEY_ALIAS and NX_KEY_PASSWORD repository secrets.
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "android/**"
-      - "dm/**"
-      - "scripts/**"
-      - ".github/workflows/android-apk.yml"
   push:
     branches:
       - android
       - "feature/**"
+      - "fix/**"
     paths:
       - "android/**"
       - "dm/**"
@@ -22,13 +18,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-apk-${{ github.ref }}
+  # One Android APK build at a time across pushes, PRs and manual runs.
+  group: android-apk-global
   cancel-in-progress: true
 
 jobs:
   build:
     name: Build arm64 Android APK
-    runs-on: macos-15
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - name: Check out source
@@ -64,12 +61,35 @@ jobs:
           python-version: "3.14"
 
       - name: Install native build tools
-        run: brew install ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build zsh perl
+
+      - name: Cache native packer stage
+        id: native-stage
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/nxnative-pack/stage
+          key: ${{ runner.os }}-native-pack-ndk28.2.13676358-py3.14.6-${{ hashFiles('android/ondevice/**', 'dm/third_party/zstd-zbic/**', 'dm/gfx/tools/dmsh_xlate_android/**', 'dm/gfx/tools/build_spirv_tools.sh', 'dm/gfx/tools/xlate_tree.py') }}
 
       - name: Build the on-device packer stage
+        if: steps.native-stage.outputs.cache-hit != 'true'
         shell: zsh {0}
         run: |
           zsh android/ondevice/build.sh "$RUNNER_TEMP/nxnative-pack"
+
+      - name: Verify native packer stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="$RUNNER_TEMP/nxnative-pack/stage"
+          test -s "$STAGE/lib/libpython3.14.so"
+          test -s "$STAGE/lib/libnxpack.so"
+          test -s "$STAGE/lib/libzbicdec.so"
+          test -s "$STAGE/lib/libdmsh_xlate.so"
+          test -s "$STAGE/lib/libSPIRV-Tools-shared.so"
+          test -d "$STAGE/python/lib/python3.14"
+          echo "Native packer stage is ready (cache hit: ${{ steps.native-stage.outputs.cache-hit == 'true' }})."
 
       - name: Configure Android SDK path
         run: |
@@ -100,11 +120,24 @@ jobs:
             echo "NX_SIGN_PASS=$NX_KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Cache .NET packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.fsproj', '**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Build APK
         working-directory: android/app
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon -PnxPlay=true -PnxPlayId=dev.nxnative.android.play.ui -PnxLabel='Banana Native ui' -PnxPackStage="$RUNNER_TEMP/nxnative-pack/stage" apk
+          ./gradlew --no-daemon --build-cache --parallel -PnxPlay=true -PnxPlayId=dev.nxnative.android.play.ui -PnxLabel='Banana Native ui' -PnxPackStage="$RUNNER_TEMP/nxnative-pack/stage" apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
