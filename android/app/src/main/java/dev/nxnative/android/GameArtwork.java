@@ -20,18 +20,44 @@ final class GameArtwork {
     private GameArtwork() {}
 
     static void load(File dump, Consumer<Artwork> done) {
-        if (dump == null || !dump.isDirectory()) {
-            MAIN.post(() -> done.accept(new Artwork(null, null)));
-            return;
-        }
         new Thread(() -> {
-            File iconFile = findArtworkFile(dump, false);
-            File backgroundFile = findArtworkFile(dump, true);
-            Bitmap icon = decode(iconFile, 512);
-            Bitmap background = decode(backgroundFile, 1920);
-            Artwork artwork = new Artwork(icon, background);
+            String id = null;
+            if (dump != null) {
+                try { id = Pack.titleIdOf(dump); } catch (Exception ignored) { }
+            }
+            File iconOverride = null, backgroundOverride = null;
+            // Overrides are loaded by the caller-facing Context overload below; dump scanning remains the automatic fallback.
+            File iconFile = iconOverride != null ? iconOverride : dump != null && dump.isDirectory() ? findArtworkFile(dump, false) : null;
+            File backgroundFile = backgroundOverride != null ? backgroundOverride : dump != null && dump.isDirectory() ? findArtworkFile(dump, true) : null;
+            Artwork artwork = new Artwork(decode(iconFile, 512), decode(backgroundFile, 1920));
             MAIN.post(() -> done.accept(artwork));
         }, "nx-game-artwork").start();
+    }
+
+    static File overrideFile(android.content.Context c, String titleId, boolean background) {
+        String path = Prefs.open(c, "home_artwork").getString(titleId + (background ? "_background" : "_icon"), null);
+        if (path == null) return null;
+        File f = new File(path);
+        return f.isFile() ? f : null;
+    }
+
+    static void load(android.content.Context c, File dump, Consumer<Artwork> done) {
+        String id = null;
+        try { if (dump != null) id = Pack.titleIdOf(dump); } catch (Exception ignored) { }
+        File iconOverride = id == null ? null : overrideFile(c, id, false);
+        File backgroundOverride = id == null ? null : overrideFile(c, id, true);
+        if (iconOverride == null && backgroundOverride == null) { load(dump, done); return; }
+        final File iconFile = iconOverride, backgroundFile = backgroundOverride;
+        new Thread(() -> {
+            Bitmap icon = decode(iconFile, 512);
+            Bitmap background = decode(backgroundFile, 1920);
+            MAIN.post(() -> done.accept(new Artwork(icon, background)));
+        }, "nx-game-artwork-custom").start();
+    }
+
+    static void setOverride(android.content.Context c, String titleId, boolean background, String path) {
+        Prefs.open(c, "home_artwork").edit()
+                .putString(titleId + (background ? "_background" : "_icon"), path).commit();
     }
 
     private static File findArtworkFile(File root, boolean background) {
