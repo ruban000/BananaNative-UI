@@ -686,7 +686,7 @@ final class TouchControls extends View {
         button.setBackground(bg);
         button.setTextColor(0xFFF0F5FF);
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        button.setTypeface(Typeface.DEFAULT_MEDIUM);
+        button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         button.setAllCaps(false);
         button.setGravity(android.view.Gravity.CENTER);
         button.setMinHeight(Math.round(52 * dp));
