@@ -23,6 +23,8 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -43,13 +45,17 @@ import java.util.Locale;
  * readable width, centered on a wide window. The activity handles rotation itself (configChanges), so a size change builds the page again (onConfigurationChanged).
  */
 public final class MainActivity extends Activity {
-    private static final int PICK_GAME = 1, PICK_PACK = 2, PICK_DLL = 3, PICK_DRIVER = 4, PICK_NUP = 5, PICK_NUP_HERE = 6;
+    private static final int PICK_GAME = 1, PICK_PACK = 2, PICK_DLL = 3, PICK_DRIVER = 4, PICK_NUP = 5, PICK_NUP_HERE = 6, PICK_HOME_ICON = 7, PICK_HOME_BACKGROUND = 8;
 
     private final List<Game> games = new ArrayList<>();
     private LinearLayout gameBox;   // the game cards (refresh)
     private View accessCard;
     private BananaBackgroundView bananas;   // retained background view host
     private Ps5AmbientBackground ambientBackground;
+    private ImageView homeArtworkView;
+    private LinearLayout homeRail;
+    private View homeDetails;
+    private Game selectedHomeGame;
     private Ui.Setting overlayRow, resRow, capRow, upsRow, sharpRow, drsRow, lsfgRow, gpuRow, updateRow;
     private boolean resumed, settingsPage;
     private Game settingsGame;   // the game whose settings page shows (GameSettings), else null
@@ -57,6 +63,7 @@ public final class MainActivity extends Activity {
     private File pendingGame;   // a game folder (or .nup) waiting for its pack folder
     private String pendingId;
     private File pendingPackPick;   // the pack folder the user just picked (remembered in Prefs once it is accepted)
+    private Game pendingArtworkGame;
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -71,6 +78,15 @@ public final class MainActivity extends Activity {
         if (saved == null) { setIntent(gated(getIntent())); fromIntent(getIntent()); }   // start() reads no_pause from getIntent() too
         GpuGl.probe(this, () -> { if (!isFinishing() && settingsGame != null) gameSettingsAgain(); });   // the GPU's name and, before any readiness check, the system driver's facts for the recommendations
         Updater.onStart(this);   // the release app: a newer release on GitHub opens the update popup (once per process start: not on a resume or a rotation)
+    }
+
+    /** Hide the status bar, but keep Android navigation visible so its auto-rotate suggestion remains available. */
+    @SuppressWarnings("deprecation")
+    private void applyImmersiveMode() {
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
 
     @Override protected void onSaveInstanceState(Bundle out) {
@@ -124,7 +140,9 @@ public final class MainActivity extends Activity {
     /** The page's ScrollView (Ui.page: the first view above the bananas) */
     private android.widget.ScrollView pageScroll() {
         FrameLayout frame = (FrameLayout) bananas.getParent();
-        return frame.getChildCount() > 1 && frame.getChildAt(1) instanceof android.widget.ScrollView ? (android.widget.ScrollView) frame.getChildAt(1) : null;
+        for (int i = 1; i < frame.getChildCount(); i++) if (frame.getChildAt(i) instanceof android.widget.ScrollView)
+            return (android.widget.ScrollView) frame.getChildAt(i);
+        return null;
     }
     private int scrollY() { android.widget.ScrollView s = pageScroll(); return s == null ? 0 : s.getScrollY(); }
     private void scrollTo(int y) { android.widget.ScrollView s = pageScroll(); if (s != null && y > 0) s.post(() -> s.scrollTo(0, y)); }
@@ -140,6 +158,7 @@ public final class MainActivity extends Activity {
         FrameLayout frame = (FrameLayout) bananas.getParent();
         if (ambientBackground != null) ambientBackground.stop();
         while (frame.getChildCount() > 1) frame.removeViewAt(1);
+        homeArtworkView = null;
         boolean wide = getResources().getConfiguration().screenWidthDp >= 600;
         LinearLayout content = Ui.page(this, frame, settingsGame != null && wide ? 1040 : 640);
         android.widget.ScrollView backgroundHost = pageScroll();
@@ -147,6 +166,21 @@ public final class MainActivity extends Activity {
             ambientBackground = new Ps5AmbientBackground();
             backgroundHost.setBackground(ambientBackground);
             if (resumed) ambientBackground.start();
+            if (onHome()) {
+                backgroundHost.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+                View ambientLayer = new View(this);
+                ambientLayer.setBackground(ambientBackground);
+                frame.addView(ambientLayer, 1, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                homeArtworkView = new ImageView(this);
+                homeArtworkView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                homeArtworkView.setAlpha(0f);
+                frame.addView(homeArtworkView, 2, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                View shade = new View(this);
+                shade.setBackground(new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                        new int[]{0x33070D1B, 0x66070D1B, 0xB8080E1A, 0xF50B101B}));
+                frame.addView(shade, 3, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
         }
         if (settingsGame != null) for (Game x : Game.load(this)) if (x.gameDir.equals(settingsGame.gameDir)) { settingsGame = x; break; }   // its folders as they are now (Folders, Import pack)
         if (settingsGame != null) { accessCard = null; gameBox = null; overlayRow = null; GameSettings.build(this, content, settingsGame, this::gameSettingsAgain, () -> page(false)); }
@@ -259,49 +293,35 @@ public final class MainActivity extends Activity {
         LinearLayout top = new LinearLayout(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
         top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setPadding(dp(2), dp(8), dp(2), dp(8));
-        TextView mark = Ui.text(this, "✦", 25, R.color.bn_accent, 800);
-        mark.setTextColor(0xFF5BA8FF);
+        top.setPadding(dp(4), dp(8), dp(4), dp(8));
+        TextView mark = Ui.text(this, "✦", 24, R.color.bn_accent, 800);
+        mark.setTextColor(0xFFB9D8FF);
         top.addView(mark);
         LinearLayout brand = new LinearLayout(this);
         brand.setOrientation(LinearLayout.VERTICAL);
-        brand.setPadding(dp(10), 0, 0, 0);
-        TextView brandName = Ui.text(this, "BANANA NATIVE", 17, R.color.bn_text, 800);
-        brandName.setTextColor(0xFFF4F7FC);
+        brand.setPadding(dp(9), 0, 0, 0);
+        TextView brandName = Ui.text(this, "BANANA NATIVE", 18, R.color.bn_text, 800);
+        brandName.setTextColor(0xFFF5F7FF);
         brand.addView(brandName);
         TextView buildTag = Ui.small(this, Prefs.buildId());
-        buildTag.setTextColor(0xFF9EADC0);
+        buildTag.setTextColor(0xFFB0BDCF);
+        buildTag.setTextSize(10);
         brand.addView(buildTag);
         top.addView(brand, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        top.addView(Ui.iconButton(this, R.drawable.ic_settings, "Settings", Ui.Kind.TONAL, v -> page(true)));
+        ImageView settings = Ui.iconButton(this, R.drawable.ic_settings, "Settings", Ui.Kind.TONAL, v -> page(true));
+        settings.setBackground(Ui.round(0x55212E46, dp(999), 0x557D91B2, dp(1)));
+        top.addView(settings);
         content.addView(top);
 
-        LinearLayout hero = new LinearLayout(this);
-        hero.setOrientation(LinearLayout.VERTICAL);
-        hero.setPadding(dp(22), dp(24), dp(22), dp(22));
-        hero.setBackground(Ui.round(0xFF111B2A, dp(24), 0x334F6B8A, dp(1)));
-        TextView eyebrow = Ui.text(this, "YOUR PLAY SPACE", 11, R.color.bn_text_2, 800);
-        eyebrow.setTextColor(0xFF8CC5FF);
-        hero.addView(eyebrow);
-        TextView headline = Ui.text(this, "Ready when you are.", 27, R.color.bn_text, 800);
-        headline.setTextColor(0xFFFFFFFF);
-        LinearLayout.LayoutParams hp = Ui.wrap();
-        hp.topMargin = dp(7);
-        hero.addView(headline, hp);
-        TextView sub = Ui.body(this, "Your games, your settings, your next adventure.");
-        sub.setTextColor(0xFF9AA8BA);
-        LinearLayout.LayoutParams subp = Ui.wrap();
-        subp.topMargin = dp(5);
-        hero.addView(sub, subp);
-        Ui.add(content, hero, 18);
-
         accessCard = accessCard();
-        Ui.add(content, accessCard, 16);
+        Ui.add(content, accessCard, 12);
         Ondevice.attach(this, content, content.getChildCount());
         fixGap(content, Ui.GAP);
         gameBox = new LinearLayout(this);
         gameBox.setOrientation(LinearLayout.VERTICAL);
-        Ui.add(content, gameBox, 16);
+        gameBox.setClipChildren(false);
+        gameBox.setClipToPadding(false);
+        Ui.add(content, gameBox, 22);
         refresh();
     }
 
@@ -459,7 +479,10 @@ public final class MainActivity extends Activity {
 
     @Override public void onWindowFocusChanged(boolean focus) {
         super.onWindowFocusChanged(focus);
-        if (focus) refreshSettings();   // back from a dialog (GPU driver, Folders, …)
+        if (focus) {
+            applyImmersiveMode();
+            refreshSettings();   // back from a dialog (GPU driver, Folders, …)
+        }
     }
 
     @Override protected void onNewIntent(Intent i) {
@@ -586,46 +609,266 @@ public final class MainActivity extends Activity {
         games.clear();
         games.addAll(Game.load(this));
         if (gameBox == null) return;
-        if (!merged && games.size() > 1) {   // a list an older version left with two entries of one game: one card each (GameList.collapse; reads the dumps: off the main thread)
+        if (!merged && games.size() > 1) {
             merged = true;
             new Thread(() -> { if (Game.collapse(this)) runOnUiThread(() -> { if (!isFinishing()) refresh(); }); }, "nx-list-merge").start();
         }
-        gameBox.removeAllViews();
-        if (games.isEmpty() && !Ondevice.showing()) { gameBox.addView(emptyCard()); return; }
-        // while a game is being prepared its card says what happens (the steps card would only repeat it), and the heading's Add game still adds another game
-        Button add = Ui.button(this, "Add game", Ui.Kind.QUIET, v -> addGame());
-        add.setCompoundDrawablesRelativeWithIntrinsicBounds(Ui.icon(this, R.drawable.ic_add, R.color.bn_accent), null, null, null);
-        add.setCompoundDrawablePadding(dp(6));
-        gameBox.addView(Ui.sectionHeader(this, "YOUR GAMES", add));
-        // A console-style horizontal game rail: large cover tiles, one clear focus target at a time.
-        android.widget.HorizontalScrollView rail = new android.widget.HorizontalScrollView(this);
-        rail.setHorizontalScrollBarEnabled(false);
-        rail.setClipToPadding(false);
-        rail.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        LinearLayout cards = new LinearLayout(this);
-        cards.setOrientation(LinearLayout.HORIZONTAL);
-        cards.setClipToPadding(false);
-        rail.addView(cards, new android.widget.HorizontalScrollView.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        LinearLayout.LayoutParams railLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        railLp.topMargin = dp(14);
-        gameBox.addView(rail, railLp);
-        // Keep the preparing card in the same rail and preserve its existing pause/resume behavior.
-        View pc = Ondevice.cardView();
-        if (pc != null && pc.getParent() instanceof ViewGroup) ((ViewGroup) pc.getParent()).removeView(pc);
-        boolean placed = false;
-        if (pc != null) { for (Game g : games) placed |= Ondevice.shows(g); if (!placed) { addRailCard(cards, pc); pc = null; } }
-        for (Game g : games) {
-            if (pc != null && Ondevice.shows(g)) { addRailCard(cards, pc); pc = null; continue; }
-            addRailCard(cards, gameCard(g));
+        boolean selectedStillExists = false;
+        if (selectedHomeGame != null) for (Game g : games) if (g.gameDir.equals(selectedHomeGame.gameDir)) { selectedStillExists = true; break; }
+        if (!selectedStillExists) {
+            selectedHomeGame = null;
+            for (Game g : games) if (selectedHomeGame == null || g.used > selectedHomeGame.used) selectedHomeGame = g;
         }
-        // The first cover is the initial controller focus; touch users can tap any cover to select it.
-        if (getCurrentFocus() == null && cards.getChildCount() > 0) cards.getChildAt(0).requestFocus();
+        gameBox.removeAllViews();
+        homeDetails = null;
+        homeRail = new LinearLayout(this);
+        homeRail.setOrientation(LinearLayout.HORIZONTAL);
+        homeRail.setGravity(Gravity.CENTER_VERTICAL);
+        homeRail.setClipChildren(false);
+        homeRail.setClipToPadding(false);
+        android.widget.HorizontalScrollView railScroll = new android.widget.HorizontalScrollView(this);
+        railScroll.setHorizontalScrollBarEnabled(false);
+        railScroll.setClipToPadding(false);
+        railScroll.setFillViewport(false);
+        railScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        railScroll.setPadding(dp(3), dp(14), dp(24), dp(18));
+        railScroll.addView(homeRail, new android.widget.HorizontalScrollView.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        gameBox.addView(railScroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        for (Game g : games) {
+            View tile = gameTile(g);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(116), ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMarginEnd(dp(16));
+            homeRail.addView(tile, lp);
+        }
+        View addTile = addGameTile();
+        LinearLayout.LayoutParams addLp = new LinearLayout.LayoutParams(dp(104), ViewGroup.LayoutParams.WRAP_CONTENT);
+        addLp.setMarginEnd(dp(4));
+        homeRail.addView(addTile, addLp);
+
+        if (selectedHomeGame != null) showHomeGame(selectedHomeGame);
+        else showEmptyHome();
+        if (selectedHomeGame != null) setHomeArtwork(selectedHomeGame);
+        if (selectedHomeGame != null && homeRail.getChildCount() > 0 && homeRail.getChildAt(0) instanceof ViewGroup)
+            ((ViewGroup) homeRail.getChildAt(0)).getChildAt(0).requestFocus();
     }
 
-    private void addRailCard(LinearLayout rail, View card) {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(276), ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMarginEnd(dp(14));
-        rail.addView(card, lp);
+    private View gameTile(Game g) {
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setGravity(Gravity.CENTER_HORIZONTAL);
+        wrap.setClipChildren(false);
+        FrameLayout tile = new FrameLayout(this);
+        tile.setFocusable(true);
+        tile.setClickable(true);
+        tile.setContentDescription(g.name + ", game cover");
+        tile.setTag(g.gameDir);
+        tile.setBackground(Ui.round(0x55202C42, dp(18), 0x557D91B2, dp(1)));
+        tile.setClipToOutline(true);
+        tile.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override public void getOutline(View v, android.graphics.Outline outline) {
+                outline.setRoundRect(0, 0, v.getWidth(), v.getHeight(), dp(18));
+            }
+        });
+        ImageView cover = new ImageView(this);
+        cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        cover.setBackgroundColor(0xFF18263B);
+        tile.addView(cover, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        TextView fallback = Ui.text(this, g.name == null || g.name.isEmpty() ? "?" : g.name.substring(0, 1).toUpperCase(Locale.ROOT), 34, R.color.bn_text, 800);
+        fallback.setGravity(Gravity.CENTER);
+        fallback.setTextColor(0xFFE8F0FF);
+        tile.addView(fallback, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        LinearLayout.LayoutParams tileLp = new LinearLayout.LayoutParams(dp(110), dp(110));
+        tileLp.gravity = Gravity.CENTER_HORIZONTAL;
+        boolean selectedInitially = selectedHomeGame != null && selectedHomeGame.gameDir.equals(g.gameDir);
+        tile.setScaleX(selectedInitially ? 1f : 0.873f);
+        tile.setScaleY(selectedInitially ? 1f : 0.873f);
+        wrap.addView(tile, tileLp);
+        TextView label = Ui.small(this, g.name);
+        label.setTextColor(0xFFD5DFEF);
+        label.setTextSize(11);
+        label.setGravity(Gravity.CENTER);
+        label.setMaxLines(1);
+        label.setEllipsize(TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        labelLp.topMargin = dp(7);
+        wrap.addView(label, labelLp);
+        Runnable select = () -> selectHomeGame(g);
+        tile.setOnClickListener(v -> select.run());
+        tile.setOnFocusChangeListener((v, focused) -> {
+            if (focused) select.run();
+            float scale = focused || (selectedHomeGame != null && selectedHomeGame.gameDir.equals(g.gameDir)) ? 1f : 0.873f;
+            tile.animate().scaleX(scale).scaleY(scale).setDuration(180).start();
+        });
+        Ui.ps5Focus(this, tile, 18);
+        if (Nup.isNup(new File(g.gameDir)) || Nup.picked(new File(g.gameDir))) {
+            GameMeta.load(new File(g.gameDir), meta -> {
+                if (tile.getParent() != null && meta.icon != null) {
+                    cover.setImageBitmap(meta.icon);
+                    fallback.setVisibility(View.GONE);
+                }
+            });
+            GameArtwork.load(this, new File(g.gameDir), art -> {
+                if (tile.getParent() != null && art.icon != null) {
+                    cover.setImageBitmap(art.icon);
+                    fallback.setVisibility(View.GONE);
+                }
+            });
+        } else {
+            GameArtwork.load(this, new File(g.gameDir), art -> {
+                android.graphics.Bitmap image = art.icon != null ? art.icon : art.background;
+                if (tile.getParent() != null && image != null) {
+                    cover.setImageBitmap(image);
+                    fallback.setVisibility(View.GONE);
+                }
+            });
+        }
+        return wrap;
+    }
+
+    private View addGameTile() {
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setGravity(Gravity.CENTER_HORIZONTAL);
+        FrameLayout tile = new FrameLayout(this);
+        tile.setFocusable(true);
+        tile.setClickable(true);
+        tile.setContentDescription("Add game");
+        tile.setBackground(Ui.round(0x55202C42, dp(18), 0x66899DBB, dp(1)));
+        TextView plus = Ui.text(this, "+", 42, R.color.bn_text, 300);
+        plus.setTextColor(0xFFEAF2FF);
+        plus.setGravity(Gravity.CENTER);
+        tile.addView(plus, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        wrap.addView(tile, new LinearLayout.LayoutParams(dp(96), dp(96)));
+        TextView label = Ui.small(this, "Add game");
+        label.setTextColor(0xFFD5DFEF);
+        label.setGravity(Gravity.CENTER);
+        label.setTextSize(11);
+        LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        labelLp.topMargin = dp(7);
+        wrap.addView(label, labelLp);
+        tile.setOnClickListener(v -> addGame());
+        Ui.ps5Focus(this, tile, 18);
+        return wrap;
+    }
+
+    private void selectHomeGame(Game game) {
+        if (game == null || selectedHomeGame != null && selectedHomeGame.gameDir.equals(game.gameDir)) return;
+        selectedHomeGame = game;
+        if (homeRail != null) {
+            for (int i = 0; i < homeRail.getChildCount(); i++) {
+                View item = homeRail.getChildAt(i);
+                if (item instanceof LinearLayout && ((LinearLayout) item).getChildCount() > 0) {
+                    View tile = ((LinearLayout) item).getChildAt(0);
+                    if (tile.getTag() != null) {
+                        boolean selected = game.gameDir.equals(tile.getTag());
+                        tile.animate().scaleX(selected ? 1f : 0.873f).scaleY(selected ? 1f : 0.873f).setDuration(180).start();
+                    }
+                }
+            }
+        }
+        showHomeGame(game);
+        setHomeArtwork(game);
+    }
+
+    private void setHomeArtwork(Game game) {
+        if (homeArtworkView == null || game == null) return;
+        homeArtworkView.setImageDrawable(null);
+        homeArtworkView.setAlpha(0f);
+        String path = game.gameDir;
+        GameArtwork.load(this, new File(path), art -> {
+            if (homeArtworkView == null || selectedHomeGame == null || !path.equals(selectedHomeGame.gameDir) || art.background == null) return;
+            homeArtworkView.setImageBitmap(art.background);
+            homeArtworkView.animate().alpha(0.48f).setDuration(500).start();
+        });
+    }
+
+    private void showHomeGame(Game game) {
+        if (homeDetails != null && homeDetails.getParent() == gameBox) gameBox.removeView(homeDetails);
+        LinearLayout detail = new LinearLayout(this);
+        detail.setOrientation(LinearLayout.VERTICAL);
+        detail.setPadding(dp(4), dp(8), dp(4), dp(18));
+        detail.setClipChildren(false);
+        detail.setClipToPadding(false);
+        LinearLayout heading = new LinearLayout(this);
+        heading.setOrientation(LinearLayout.HORIZONTAL);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = Ui.text(this, game.name, 29, R.color.bn_text, 800);
+        title.setTextColor(0xFFF7F9FF);
+        title.setMaxLines(2);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        heading.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView status = Ui.status(this, Profile.of(game.titleId) == null ? "Not supported" : "Checking…", R.color.bn_text_2);
+        status.setTextColor(Profile.of(game.titleId) == null ? 0xFFFFA0A0 : 0xFFB9E9D0);
+        Ui.pill(status).setBackground(Ui.round(0x44232F46, dp(999), 0x667D96B7, dp(1)));
+        LinearLayout.LayoutParams statusLp = Ui.wrap();
+        statusLp.leftMargin = dp(12);
+        heading.addView(status, statusLp);
+        detail.addView(heading);
+
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setPadding(0, dp(7), 0, 0);
+        detail.addView(info);
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        actionLp.topMargin = dp(15);
+        if (Profile.of(game.titleId) != null) {
+            Ui.Action play = Ui.action(this, R.drawable.ic_play, "Play", Ui.Kind.QUIET, v -> launch(game));
+            play.setMinimumHeight(dp(48));
+            android.graphics.drawable.GradientDrawable playBg = new android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                    new int[]{0xEE315FAE, 0xEE183D78});
+            playBg.setCornerRadius(dp(999));
+            playBg.setStroke(dp(1), 0xAA9FC4FF);
+            play.setBackground(playBg);
+            play.setPadding(dp(20), 0, dp(22), 0);
+            play.label.setTextColor(0xFFFFFFFF);
+            play.icon.setImageTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
+            Ui.ps5Focus(this, play, 999);
+            actions.addView(play, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            check(game, status, play, info);
+        } else {
+            TextView missing = Ui.body(this, Profile.missing(game.titleId, game.name));
+            missing.setTextColor(0xFFE6A0A0);
+            detail.addView(missing);
+        }
+        Button options = Ui.button(this, "⋯", Ui.Kind.TONAL, v -> homeOptions(game, v));
+        options.setTextSize(23);
+        options.setPadding(0, 0, 0, 0);
+        options.setMinWidth(dp(48));
+        options.setMinimumWidth(dp(48));
+        options.setMinHeight(dp(48));
+        options.setMinimumHeight(dp(48));
+        options.setBackground(Ui.round(0x66232F48, dp(999), 0x667E96B8, dp(1)));
+        Ui.ps5Focus(this, options, 999);
+        LinearLayout.LayoutParams optionsLp = new LinearLayout.LayoutParams(dp(48), dp(48));
+        optionsLp.leftMargin = dp(10);
+        actions.addView(options, optionsLp);
+        detail.addView(actions, actionLp);
+        homeDetails = detail;
+        gameBox.addView(detail, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    }
+
+    private void showEmptyHome() {
+        LinearLayout empty = new LinearLayout(this);
+        empty.setOrientation(LinearLayout.VERTICAL);
+        empty.setPadding(dp(4), dp(8), dp(4), dp(24));
+        TextView title = Ui.text(this, "Your next adventure starts here", 25, R.color.bn_text, 800);
+        title.setTextColor(0xFFF4F7FF);
+        empty.addView(title);
+        TextView note = Ui.body(this, "Add a game to build your library.");
+        note.setTextColor(0xFFB4C1D4);
+        LinearLayout.LayoutParams noteLp = Ui.wrap();
+        noteLp.topMargin = dp(8);
+        empty.addView(note, noteLp);
+        homeDetails = empty;
+        gameBox.addView(empty, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
     /** No game yet: the banana, the three steps, and Add game */
@@ -699,7 +942,12 @@ public final class MainActivity extends Activity {
         Ui.pill(st).setBackground(Ui.round(0xFF18385D, dp(999), 0xFF315A83, dp(1)));
         info.addView(st, sp);
         top.addView(info, Ui.weight());
-        top.addView(Ui.more(this, "Manage " + g.name, v -> manage(g)));
+        // Keep the Home options tap independent from the card's click/focus handlers.
+        // Ui.more installs the shared PS5 focus animation; replace only its wrapped click
+        // listener so a touchscreen tap always opens the four-action sheet directly.
+        ImageView optionsButton = Ui.more(this, "Options for " + g.name, null);
+        optionsButton.setOnClickListener(v -> homeOptions(g, v));
+        top.addView(optionsButton);
         c.addView(top);
         item.addView(c, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         Ui.Action play = Ui.action(this, R.drawable.ic_play, "Play", Ui.Kind.PRIMARY, v -> launch(g));
@@ -915,11 +1163,34 @@ public final class MainActivity extends Activity {
         }, "nx-pack-check").start();
     }
 
+    /** Home card ⋯: show the four Home actions first; only the settings row opens GameSettings. */
+    private void homeOptions(Game g, View anchor) {
+        Ui.choiceSheet(this, "Options for " + g.name, "Choose an action for this game",
+                new String[]{"Background", "Icon", "Per-game settings", "Remove from list"}, -1,
+                choice -> {
+                    switch (choice) {
+                        case 0: pickHomeArtwork(g, true); break;
+                        case 1: pickHomeArtwork(g, false); break;
+                        case 2: manage(g); break;
+                        case 3: removeGameFromList(g); break;
+                    }
+                }).show();
+    }
+
     /** The game's Manage sheet, also from its progress card's ⋯ while it is being prepared (Ondevice) */
     void manageGame(Game g) { manage(g); }
 
-    /** A game's page (⋯ on its card, or a long press; GameSettings): its settings, saves and storage under tabs, Play in its header */
+    /** A game's page (⋯ on Home): its settings, home artwork, saves and storage under tabs. */
     private void manage(Game g) { GameSettings.open(this, g); }
+
+    void pickHomeArtwork(Game g, boolean background) {
+        pendingArtworkGame = g;
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(pick, background ? PICK_HOME_BACKGROUND : PICK_HOME_ICON);
+    }
+
+    void removeGameFromList(Game g) { page(false); confirmRemove(g); }
 
     /**
      * A game's page, its Saves tab (save backups in &lt;Switch2&gt;/save-backups/&lt;id&gt;/, verified; a restore backs up the current save first: SaveUi, SaveStore) or its
@@ -963,8 +1234,7 @@ public final class MainActivity extends Activity {
                 + "\nShaders: " + (lp == null ? "present (" + BuildConfig.NX_DMSH_VK_CHAIN + ")" : lp) + "\nSaves: " + (save != null ? save.getPath() : "not set"));
         info.text.setTextSize(12);
         Ui.add(content, info, 8);
-        Ui.add(content, Ui.divider(this), 12, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
-        Ui.add(content, Ui.button(this, "Remove from list", Ui.Kind.DANGER, v -> { page(false); confirmRemove(g); }), 12, Ui.wrap());
+
     }
 
     private void openAccessSettings() {
@@ -1120,6 +1390,10 @@ public final class MainActivity extends Activity {
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         if (Ondevice.activityResult(this, request, result, data)) return;
+        if ((request == PICK_HOME_ICON || request == PICK_HOME_BACKGROUND) && result == RESULT_OK && data != null && data.getData() != null) {
+            saveHomeArtwork(data.getData(), request == PICK_HOME_BACKGROUND);
+            return;
+        }
         if (request == ReadinessActivity.REQUEST) { if (result == ReadinessActivity.FIX_DRIVER) GpuDriver.dialog(this, PICK_DRIVER); return; }   // its "Pick a GPU driver"
         if (result != RESULT_OK || data == null || data.getData() == null) return;
         if (request == PICK_DRIVER) { GpuDriver.picked(this, data.getData()); return; }
@@ -1365,7 +1639,46 @@ public final class MainActivity extends Activity {
         return null;
     }
 
-    /** Remove from the list (the Manage sheet): says exactly what goes (the list entry) and what stays (the folders and the saves) */
+    private void saveHomeArtwork(Uri uri, boolean background) {
+        Game target = pendingArtworkGame;
+        pendingArtworkGame = null;
+        if (target == null) return;
+        new Thread(() -> {
+            File saved = null;
+            String error = null;
+            try (InputStream in = getContentResolver().openInputStream(uri)) {
+                if (in == null) throw new IOException("The selected image could not be opened.");
+                File dir = new File(getFilesDir(), "home-artwork");
+                if (!dir.exists() && !dir.mkdirs()) throw new IOException("Could not create the artwork folder.");
+                String mime = getContentResolver().getType(uri);
+                String ext = mime != null && mime.toLowerCase(Locale.ROOT).contains("png") ? ".png"
+                        : mime != null && mime.toLowerCase(Locale.ROOT).contains("webp") ? ".webp" : ".jpg";
+                saved = new File(dir, target.titleId + (background ? "-background" : "-icon") + ext);
+                try (FileOutputStream out = new FileOutputStream(saved)) {
+                    byte[] buffer = new byte[16384]; int n; long total = 0;
+                    while ((n = in.read(buffer)) != -1) {
+                        total += n;
+                        if (total > 32L * 1024L * 1024L) throw new IOException("Choose an image smaller than 32 MB.");
+                        out.write(buffer, 0, n);
+                    }
+                }
+                android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
+                bounds.inJustDecodeBounds = true;
+                android.graphics.BitmapFactory.decodeFile(saved.getAbsolutePath(), bounds);
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw new IOException("That file is not a supported image.");
+                GameArtwork.setOverride(this, target.titleId, background, saved.getAbsolutePath());
+            } catch (Exception e) { error = e.getMessage(); if (saved != null) saved.delete(); }
+            String problem = error;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (problem != null) { error("Artwork not changed: " + problem); return; }
+                Toast.makeText(this, background ? "Home background updated" : "Game icon updated", Toast.LENGTH_SHORT).show();
+                refresh();
+            });
+        }, "nx-home-artwork").start();
+    }
+
+    /** Remove from the list: says exactly what goes (the list entry) and what stays (the folders and the saves) */
     private void confirmRemove(Game g) {
         File save = Folders.save(this, g);
         if (CopyPlan.isCopy(AppStorage.root(this), g.gameDir)) { confirmRemoveCopy(g, save); return; }
