@@ -838,7 +838,7 @@ public final class MainActivity extends Activity {
             missing.setTextColor(0xFFE6A0A0);
             detail.addView(missing);
         }
-        Button options = Ui.button(this, "⋯", Ui.Kind.TONAL, v -> manage(game));
+        Button options = Ui.button(this, "⋯", Ui.Kind.TONAL, v -> homeOptions(game, v));
         options.setTextSize(23);
         options.setPadding(0, 0, 0, 0);
         options.setMinWidth(dp(48));
