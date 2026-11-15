@@ -1467,57 +1467,101 @@ final class Ui {
                                    java.util.function.IntConsumer choose) {
         LinearLayout options = new LinearLayout(a);
         options.setOrientation(LinearLayout.VERTICAL);
+        options.setClipChildren(false);
+        options.setClipToPadding(false);
         if (note != null && note.length() > 0) {
             TextView intro = small(a, note);
             intro.setTextColor(0xFFD4DCE8);
+            intro.setPadding(dp(a, 4), dp(a, 4), dp(a, 4), dp(a, 8));
             add(options, intro, 0);
-            add(options, divider(a), 10);
+            add(options, divider(a), 4);
         }
         AlertDialog[] dialog = new AlertDialog[1];
         for (int i = 0; i < labels.length; i++) {
             final int index = i;
             LinearLayout item = row(a);
-            item.setMinimumHeight(dp(a, 54));
-            item.setPadding(dp(a, 16), dp(a, 8), dp(a, 12), dp(a, 8));
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setMinimumHeight(dp(a, 58));
+            item.setPadding(dp(a, 16), dp(a, 8), dp(a, 16), dp(a, 8));
+            item.setClipChildren(false);
+            item.setClipToPadding(false);
             item.setBackground(round(Color.TRANSPARENT, dp(a, 12), 0, 0));
-            item.addView(text(a, labels[i], 15, R.color.bn_text, 600), weight());
-            TextView tick = text(a, i == checked ? "✓" : "", 18, R.color.bn_text, 700);
+
+            TextView label = text(a, labels[i], 16, R.color.bn_text, 600);
+            label.setGravity(Gravity.CENTER_VERTICAL);
+            label.setIncludeFontPadding(false);
+            item.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView tick = text(a, "✓", 20, R.color.bn_text, 700);
             tick.setTextColor(Color.WHITE);
-            item.addView(tick, new LinearLayout.LayoutParams(dp(a, 28), ViewGroup.LayoutParams.WRAP_CONTENT));
+            tick.setGravity(Gravity.CENTER);
+            tick.setIncludeFontPadding(false);
+            tick.setVisibility(i == checked ? View.VISIBLE : View.INVISIBLE);
+            tick.setContentDescription(i == checked ? "Selected" : null);
+            item.addView(tick, new LinearLayout.LayoutParams(dp(a, 36), dp(a, 36)));
+
+            item.setContentDescription(labels[i] + (i == checked ? ", selected" : ""));
+            item.setSelected(i == checked);
             ps5Focus(a, item, 12);
             item.setOnClickListener(v -> {
                 click(v);
                 choose.accept(index);
                 if (dialog[0] != null) dialog[0].dismiss();
             });
-            options.addView(item, fill());
+            options.addView(item, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             if (i + 1 < labels.length) {
                 View line = divider(a);
                 line.setBackgroundColor(0x20FFFFFF);
-                options.addView(line);
+                LinearLayout.LayoutParams lineLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 1));
+                lineLp.leftMargin = dp(a, 12);
+                lineLp.rightMargin = dp(a, 12);
+                options.addView(line, lineLp);
             }
         }
+
         dialog[0] = sheet(a, title, options).setNegativeButton("Cancel", null).create();
         dialog[0].setOnShowListener(v -> {
-            // The dialog window supplies the single outer PS5 panel; remove the nested ScrollView panel.
+            // Keep one glass panel only: the window owns the surface, not the nested scroll container.
             android.view.ViewParent contentParent = options.getParent();
             if (contentParent instanceof View) ((View) contentParent).setBackgroundColor(Color.TRANSPARENT);
+            TextView heading = dialog[0].findViewById(android.R.id.alertTitle);
+            if (heading != null) {
+                heading.setTextColor(Color.WHITE);
+                heading.setTextSize(19);
+                heading.setTypeface(face(700));
+                heading.setPadding(dp(a, 24), dp(a, 20), dp(a, 24), dp(a, 8));
+            }
             if (dialog[0].getWindow() != null) {
                 android.graphics.drawable.GradientDrawable dialogBg = new android.graphics.drawable.GradientDrawable(
                         android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                        new int[]{0xFF050A14, 0xFF0D192E});
-                dialogBg.setCornerRadius(dp(a, 22));
-                dialogBg.setStroke(dp(a, 1), 0x44FFFFFF);
+                        new int[]{0xFF080F1D, 0xFF101D31});
+                dialogBg.setCornerRadius(dp(a, 24));
+                dialogBg.setStroke(dp(a, 1), 0x3DFFFFFF);
                 dialog[0].getWindow().setBackgroundDrawable(dialogBg);
-                if (android.os.Build.VERSION.SDK_INT >= 31) dialog[0].getWindow().setBackgroundBlurRadius(dp(a, 24));
+                if (android.os.Build.VERSION.SDK_INT >= 31) dialog[0].getWindow().setBackgroundBlurRadius(dp(a, 20));
                 dialog[0].getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
                 android.view.WindowManager.LayoutParams lp = dialog[0].getWindow().getAttributes();
-                lp.dimAmount = 0.62f;
+                lp.dimAmount = 0.48f;
                 dialog[0].getWindow().setAttributes(lp);
+                int maxWidth = Math.min(a.getResources().getDisplayMetrics().widthPixels - dp(a, 32), dp(a, 560));
+                dialog[0].getWindow().setLayout(Math.max(dp(a, 280), maxWidth),
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
             }
             Button cancel = dialog[0].getButton(AlertDialog.BUTTON_NEGATIVE);
-            if (cancel != null) cancel.setTextColor(Color.WHITE);
-            if (checked >= 0 && checked < labels.length) options.getChildAt(checked * 2).requestFocus();
+            if (cancel != null) {
+                cancel.setTextColor(Color.WHITE);
+                cancel.setAllCaps(false);
+                cancel.setTextSize(15);
+                cancel.setTypeface(face(600));
+                cancel.setMinHeight(dp(a, 48));
+                cancel.setPadding(dp(a, 20), 0, dp(a, 20), 0);
+            }
+            if (checked >= 0 && checked < labels.length) {
+                options.getChildAt(note != null && note.length() > 0 ? 2 + checked * 2 : checked * 2)
+                        .post(() -> options.getChildAt(note != null && note.length() > 0 ? 2 + checked * 2 : checked * 2).requestFocus());
+            }
         });
         dialog[0].show();
         return dialog[0];
