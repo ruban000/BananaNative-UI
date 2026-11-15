@@ -48,7 +48,7 @@ final class SidePanel extends FrameLayout {
     static final String[] TAB_NAMES = {"Performance", "Display", "Controls", "General"};
     private static final int TAB_PERF = 0, TAB_DISPLAY = 1, TAB_CONTROLS = 2, TAB_GENERAL = 3;
     private int tab = TAB_PERF;
-    private static final int FOCUS = 0xFF9B8CFF;   // violet accent for the selected tab and controller focus
+    private static final int FOCUS = 0xFFEAF4FF;   // restrained PS5 white focus rim
     private static final String UI_PREFS = "banana_native_side_panel";
     private static final String UI_ANIMATIONS = "menu_button_animations";
     private boolean animationsEnabled() {
@@ -83,9 +83,9 @@ final class SidePanel extends FrameLayout {
     private static GradientDrawable makePanelBackground() {
         GradientDrawable bg = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[] {0xF5182638, 0xF50B1422, 0xF5162233});
+                new int[] {0xF20D1726, 0xF20A111D, 0xF2101D2D});
         bg.setCornerRadius(0);
-        bg.setStroke(1, 0x5579A9D8);
+        bg.setStroke(1, 0x447F9BB8);
         return bg;
     }
 
@@ -95,7 +95,7 @@ final class SidePanel extends FrameLayout {
         this.rows = rows;
         float dp = getResources().getDisplayMetrics().density;
         View scrim = new View(a);
-        scrim.setBackgroundColor(0x99050A18);
+        scrim.setBackgroundColor(0xAA02050B);
         scrim.setOnClickListener(v -> close());
         addView(scrim, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         box = new LinearLayout(a);
@@ -120,19 +120,29 @@ final class SidePanel extends FrameLayout {
         brand.addView(brandTitle, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
         TextView live = new TextView(a);
         live.setText("●  IN GAME");
-        live.setTextColor(0xFF9FE5C2);
+        live.setTextColor(0xFFB9C8D9);
         live.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         live.setTypeface(Typeface.DEFAULT_BOLD);
         live.setPadding(Math.round(9 * dp), Math.round(6 * dp), Math.round(9 * dp), Math.round(6 * dp));
         GradientDrawable liveBg = new GradientDrawable();
-        liveBg.setColor(0x222CCB86);
+        liveBg.setColor(0x222F4C69);
         liveBg.setCornerRadius(999 * dp);
         live.setBackground(liveBg);
         brand.addView(live, new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+        TextView exit = new TextView(a);
+        exit.setText("⏻");
+        exit.setTextColor(0xFFF1F5FA);
+        exit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 25);
+        exit.setGravity(Gravity.CENTER);
+        exit.setFocusable(true);
+        exit.setPadding(Math.round(12 * dp), 0, Math.round(4 * dp), 0);
+        exit.setContentDescription("Stop game and return to Banana Native");
+        exit.setOnClickListener(v -> { animateTap(v); confirmStop(); });
+        brand.addView(exit, new LinearLayout.LayoutParams(Math.round(48 * dp), Math.round(48 * dp)));
         sh.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         tabs = new LinearLayout(a);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackgroundColor(0xFF101B2A);
+        tabs.setBackgroundColor(0xFF0A111D);
         sh.addView(tabs, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         sh.addView(scroll, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         addView(sh, new LayoutParams(PanelLook.widthPx(Prefs.panelSize(a), dp, a.getResources().getDisplayMetrics().widthPixels), LayoutParams.MATCH_PARENT, Gravity.END));
@@ -286,12 +296,12 @@ final class SidePanel extends FrameLayout {
         if (now == null || !inside(now)) return;
         float dp = getResources().getDisplayMetrics().density;
         android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
-        d.setColor(0x229B8CFF);
-        d.setStroke(Math.round(2.5f * dp), FOCUS);
+        d.setColor(0x1CEAF4FF);
+        d.setStroke(Math.round(1.7f * dp), FOCUS);
         d.setCornerRadius(10 * dp);
         now.setForeground(d);
         now.animate().cancel();
-        now.animate().scaleX(1.018f).scaleY(1.018f).setDuration(180).start();
+        now.animate().scaleX(1.012f).scaleY(1.012f).setDuration(220).start();
         lit = now;
     }
 
@@ -322,7 +332,7 @@ final class SidePanel extends FrameLayout {
             int k = i;
             boolean on = i == tab;
             TextView t = new TextView(act);
-            String[] glyphs = {"⚡", "▣", "⌖", "☷"};
+            String[] glyphs = {"◷", "▣", "⌖", "☷"};
             t.setText(glyphs[i] + "\n" + TAB_NAMES[i]);
             t.setGravity(Gravity.CENTER);
             t.setMaxLines(2);
@@ -330,10 +340,11 @@ final class SidePanel extends FrameLayout {
             t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);   // compact icon-and-label navigation
             t.setPadding(pad, 0, pad, 0);
             t.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-            t.setTextColor(on ? 0xFFECF4FF : 0xFFB5C2D2);
+            t.setTextColor(on ? 0xFFFFFFFF : 0xFF9EADBF);
             GradientDrawable tabBg = new GradientDrawable();
             tabBg.setCornerRadius(14 * dp);
-            tabBg.setColor(on ? 0xFF397FD0 : 0x00101B2A);
+            tabBg.setColor(on ? 0x333B5D7D : 0x000A111D);
+            tabBg.setStroke(Math.max(1, Math.round(dp)), on ? 0x99EAF4FF : 0x00000000);
             t.setBackground(tabBg);
             t.setPadding(pad, Math.round(5 * dp), pad, Math.round(5 * dp));
             t.setSelected(on);
@@ -579,6 +590,19 @@ final class SidePanel extends FrameLayout {
         });
     }
 
+    /** A single safe exit path for the header power icon and General › Stop. */
+    private void confirmStop() {
+        padDialog(new AlertDialog.Builder(act).setTitle("Stop the game?")
+                .setMessage("The game will close and return to Banana Native. Unsaved progress may be lost.")
+                .setPositiveButton("Stop game", (d, w) -> {
+                    Native.note("stopped by the user");
+                    ExitWatch.stopped();
+                    if (act instanceof GameActivity) ((GameActivity) act).stopFromPanel();
+                    else act.finish();
+                })
+                .setNegativeButton("Keep playing", null).show());
+    }
+
     /** General: panel appearance, animation preference, Pause, Stop and Back to the game */
     private void general() {
         note("The game runs on behind this panel; every change applies now and is kept, except those marked for the next start.");
@@ -595,7 +619,7 @@ final class SidePanel extends FrameLayout {
 
         Button pause = new Button(act);   // the game suspended (clock, graphics, threads, audio) until a tap on the screen, or A / Start: GameActivity.pause
         pause.setText("Ⅱ   Pause the game");
-        actionButton(pause, 0xFF1D3552, 0xFF5B9FE8, 0xFFF0F6FF);
+        actionButton(pause, 0xFF17263A, 0x667C9BB9, 0xFFF2F6FC);
         pause.setOnClickListener(v -> { close(); if (act instanceof GameActivity) ((GameActivity) act).pause(); });
         LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         pl.topMargin = Math.round(24 * getResources().getDisplayMetrics().density);
@@ -607,16 +631,14 @@ final class SidePanel extends FrameLayout {
         box.addView(ret);
         Button stop = new Button(act);
         stop.setText("■   Stop the game");
-        actionButton(stop, 0xFF3A202B, 0xFFB94B62, 0xFFFFE8EC);
-        stop.setOnClickListener(v -> padDialog(new AlertDialog.Builder(act).setTitle("Stop the game?").setMessage("The game ends; unsaved progress is lost. The log stays for Share log.")
-                .setPositiveButton("Stop", (d, w) -> { Native.note("stopped by the user"); ExitWatch.stopped(); if (act instanceof GameActivity) ((GameActivity) act).backToFrontend(); android.os.Process.killProcess(android.os.Process.myPid()); })
-                .setNegativeButton("Keep running", null).show()));
+        actionButton(stop, 0xFF241923, 0x668E6674, 0xFFFFEDF1);
+        stop.setOnClickListener(v -> confirmStop());
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.topMargin = Math.round(24 * getResources().getDisplayMetrics().density);
         box.addView(stop, lp);
         Button done = new Button(act);
         done.setText("↩   Back to the game");
-        actionButton(done, 0xFF202B3D, 0xFF526987, 0xFFE7EFFB);
+        actionButton(done, 0xFF121E2D, 0x557C9BB9, 0xFFE7EFFB);
         done.setOnClickListener(v -> close());
         box.addView(done, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
     }
