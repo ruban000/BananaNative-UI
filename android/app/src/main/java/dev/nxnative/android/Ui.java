@@ -28,7 +28,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 /**
- * The launcher's building blocks, in code like the rest of the launcher (no layouts, no AndroidX), in the banana palette (res/values/colors.xml, values-night for dark
+ * The launcher's building blocks, in code like the rest of the launcher (no layouts, no AndroidX), in the midnight-console palette (res/values/colors.xml, values-night for dark
  * mode; themes.xml's Theme.Banana). One small design system so every screen looks the same:
  * <ul>
  * <li>Type: page title 24 sp heavy, heading 18 sp bold, body 15 sp, small 13 sp, section label 12 sp caps; buttons 15 sp semibold, one line.</li>
@@ -93,12 +93,12 @@ final class Ui {
         return g;
     }
 
-    /** A touch ripple in peel brown over a shape (the shape is its mask) */
+    /** A restrained white touch ripple over a shape (the shape is its mask) */
     static Drawable ripple(Context c, GradientDrawable shape) {
         GradientDrawable mask = new GradientDrawable();   // an opaque copy of the shape: a transparent button (QUIET) still shows its ripple
         mask.setColor(Color.BLACK);
         mask.setCornerRadius(shape.getCornerRadius());
-        return new RippleDrawable(ColorStateList.valueOf(0x336B4423), shape, mask);
+        return new RippleDrawable(ColorStateList.valueOf(0x22FFFFFF), shape, mask);
     }
 
     /** Keep the scaled focus ring inside a 16dp viewport gutter, even on narrow screens. */
