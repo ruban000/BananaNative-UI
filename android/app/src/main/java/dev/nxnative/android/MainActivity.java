@@ -741,8 +741,10 @@ public final class MainActivity extends Activity {
                 View item = homeRail.getChildAt(i);
                 if (item instanceof LinearLayout && ((LinearLayout) item).getChildCount() > 0) {
                     View tile = ((LinearLayout) item).getChildAt(0);
-                    boolean selected = game.gameDir.equals(tile.getTag());
-                    tile.animate().scaleX(selected ? 1f : 0.873f).scaleY(selected ? 1f : 0.873f).setDuration(180).start();
+                    if (tile.getTag() != null) {
+                        boolean selected = game.gameDir.equals(tile.getTag());
+                        tile.animate().scaleX(selected ? 1f : 0.873f).scaleY(selected ? 1f : 0.873f).setDuration(180).start();
+                    }
                 }
             }
         }
