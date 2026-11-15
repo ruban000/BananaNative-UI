@@ -1174,7 +1174,7 @@ public final class MainActivity extends Activity {
                         case 2: manage(g); break;
                         case 3: removeGameFromList(g); break;
                     }
-                });
+                }).show();
     }
 
     /** The game's Manage sheet, also from its progress card's ⋯ while it is being prepared (Ondevice) */
