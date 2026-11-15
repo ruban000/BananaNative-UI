@@ -89,11 +89,6 @@ public final class MainActivity extends Activity {
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
     }
 
-    @Override public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) applyImmersiveMode();
-    }
-
     @Override protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         out.putBoolean("settings", settingsPage);
@@ -484,7 +479,10 @@ public final class MainActivity extends Activity {
 
     @Override public void onWindowFocusChanged(boolean focus) {
         super.onWindowFocusChanged(focus);
-        if (focus) refreshSettings();   // back from a dialog (GPU driver, Folders, …)
+        if (focus) {
+            applyImmersiveMode();
+            refreshSettings();   // back from a dialog (GPU driver, Folders, …)
+        }
     }
 
     @Override protected void onNewIntent(Intent i) {
