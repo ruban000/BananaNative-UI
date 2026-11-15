@@ -117,11 +117,7 @@ final class GameSettings {
 
         Section picture = new Section(a, "picture", "🖼️", "Picture"), speed = new Section(a, "speed", "⏱️", "Speed"),
                 options = new Section(a, "options", "🌿", "Game options"), controls = new Section(a, "controls", "🕹️", "Controls"),
-                home = new Section(a, "home", "🏠", "Home screen"), advanced = new Section(a, "advanced", "🧪", "Advanced");
-        home.info = "Choose the artwork shown for this game on the Home screen. Your selected images are copied into the app.";
-        home.add(new Ui.Setting(a, "🖼️", "Background", v -> a.pickHomeArtwork(g, true)).value("Choose image…").chevron(a));
-        home.add(new Ui.Setting(a, "🎮", "Icon", v -> a.pickHomeArtwork(g, false)).value("Choose image…").chevron(a));
-        home.add(new Ui.Setting(a, "🗑️", "Remove from list", v -> a.removeGameFromList(g)).value("Keeps the dump, pack and saves").chevron(a));
+                advanced = new Section(a, "advanced", "🧪", "Advanced");
         picture.info = "The in-game panel changes the upscaler and the window while the game runs; the rest applies at the next start.";
         speed.info = "The in-game panel changes the frame rate cap, Hold 60 fps and Full game speed while the game runs.";
         Profile prof = Profile.of(id);
@@ -270,7 +266,7 @@ final class GameSettings {
         advanced.add(new Ui.Setting(a, "📝", "Extra environment", v -> env(a, g, again))
                 .value(envLines == 0 ? "None" : envLines + (envLines == 1 ? " line: " : " lines: ") + env.replace('\n', ' ')).chevron(a));
 
-        Section[] all = perf ? new Section[] {picture, speed, advanced} : new Section[] {options, controls, home};   // Game: game options, controls and Home artwork/removal
+        Section[] all = perf ? new Section[] {picture, speed, advanced} : new Section[] {options, controls};   // Game: game options and controls
         View reset = recLine != null ? null : Ui.button(a, "Reset to defaults", Ui.Kind.SOFT, v -> new AlertDialog.Builder(a).setTitle("Reset to defaults · " + g.name)
                 .setMessage("The game will follow global settings. Extra environment lines are kept.")
                 .setPositiveButton("Reset", (x, w) -> { Prefs.resetGame(a, id); again.run(); }).setNegativeButton("Cancel", null).show());
