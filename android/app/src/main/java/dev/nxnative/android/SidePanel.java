@@ -158,9 +158,12 @@ final class SidePanel extends FrameLayout {
         exit.setElevation(12 * dp);
         exit.setOnClickListener(v -> { animateTap(v); confirmStop(); });
 
-        FrameLayout.LayoutParams exitLp = new FrameLayout.LayoutParams(Math.round(58 * dp), Math.round(58 * dp), Gravity.BOTTOM | Gravity.RIGHT);
-        exitLp.setMargins(0, 0, Math.round(22 * dp), Math.round(22 * dp));
-        sh.addView(exit, exitLp);
+        int panelWidth = PanelLook.widthPx(Prefs.panelSize(a), dp, a.getResources().getDisplayMetrics().widthPixels);
+        int exitSize = Math.round(58 * dp);
+        FrameLayout.LayoutParams exitLp = new FrameLayout.LayoutParams(exitSize, exitSize, Gravity.BOTTOM | Gravity.RIGHT);
+        // Anchor the floating action to the panel's left edge; half the circle sits outside over the game.
+        exitLp.setMargins(0, 0, Math.max(0, panelWidth - exitSize / 2), Math.round(22 * dp));
+        addView(exit, exitLp);
         final boolean[] tabsHidden = {false};
         final int[] scrollDirection = {0};
         final int[] directionTravel = {0};
@@ -204,7 +207,7 @@ final class SidePanel extends FrameLayout {
                     .translationY(compact ? -Math.round(5 * dp) : 0).setDuration(160).start();
             tabs.setElevation(compact ? 8 * dp : 2 * dp);
         });
-        addView(sh, new LayoutParams(PanelLook.widthPx(Prefs.panelSize(a), dp, a.getResources().getDisplayMetrics().widthPixels), LayoutParams.MATCH_PARENT, Gravity.END));
+        addView(sh, new LayoutParams(panelWidth, LayoutParams.MATCH_PARENT, Gravity.END));
         sheet = sh;
 
         setVisibility(GONE);
