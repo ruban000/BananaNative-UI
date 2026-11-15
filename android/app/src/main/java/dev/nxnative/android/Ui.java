@@ -1199,7 +1199,7 @@ final class Ui {
             // Foreground bounds track the complete measured row, including wrapped subtitles and tags.
             settingFocus(c, view, 12);
             view.setSoundEffectsEnabled(false);
-            view.setOnClickListener(v -> { click(v); if (l != null) l.onClick(v); });
+            if (l != null) view.setOnClickListener(v -> { click(v); l.onClick(v); });
             tile = new SettingIconView(c, emoji);
             tile.setTextSize(22);
             // Keep the icon itself completely bare; selection is shown by the row focus border only.
