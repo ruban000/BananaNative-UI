@@ -942,7 +942,7 @@ public final class MainActivity extends Activity {
         Ui.pill(st).setBackground(Ui.round(0xFF18385D, dp(999), 0xFF315A83, dp(1)));
         info.addView(st, sp);
         top.addView(info, Ui.weight());
-        top.addView(Ui.more(this, "Manage " + g.name, v -> manage(g)));
+        top.addView(Ui.more(this, "Options for " + g.name, v -> homeOptions(g)));
         c.addView(top);
         item.addView(c, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         Ui.Action play = Ui.action(this, R.drawable.ic_play, "Play", Ui.Kind.PRIMARY, v -> launch(g));
@@ -1156,6 +1156,21 @@ public final class MainActivity extends Activity {
                 info.addView(n, lp);
             });
         }, "nx-pack-check").start();
+    }
+
+    /** Home card options: artwork and list actions live here, not in Game settings. */
+    private void homeOptions(Game g) {
+        new AlertDialog.Builder(this).setTitle(g.name)
+                .setItems(new String[] {"Home screen", "Game settings"}, (d, which) -> {
+                    if (which == 0) {
+                        new AlertDialog.Builder(this).setTitle("Home screen · " + g.name)
+                                .setItems(new String[] {"Background", "Icon", "Remove from list"}, (x, action) -> {
+                                    if (action == 0) pickHomeArtwork(g, true);
+                                    else if (action == 1) pickHomeArtwork(g, false);
+                                    else removeGameFromList(g);
+                                }).setNegativeButton("Cancel", null).show();
+                    } else manage(g);
+                }).setNegativeButton("Cancel", null).show();
     }
 
     /** The game's Manage sheet, also from its progress card's ⋯ while it is being prepared (Ondevice) */
