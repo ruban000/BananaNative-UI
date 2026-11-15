@@ -1161,7 +1161,7 @@ public final class MainActivity extends Activity {
     /** Home card options: artwork and list actions live here, not in Game settings. */
     private void homeOptions(Game g) {
         new AlertDialog.Builder(this).setTitle(g.name)
-                .setItems(new String[] {"Home screen", "Game settings"}, (d, which) -> {
+                .setItems(new String[] {"Home screen", "Per-game settings"}, (d, which) -> {
                     if (which == 0) {
                         new AlertDialog.Builder(this).setTitle("Home screen · " + g.name)
                                 .setItems(new String[] {"Background", "Icon", "Remove from list"}, (x, action) -> {
