@@ -1,4 +1,5 @@
 name: Android APK
+# Persistent signing uses NX_KEYSTORE_BASE64, NX_KEY_ALIAS and NX_KEY_PASSWORD repository secrets.
 
 on:
   workflow_dispatch:
