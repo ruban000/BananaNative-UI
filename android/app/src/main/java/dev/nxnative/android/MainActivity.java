@@ -80,16 +80,13 @@ public final class MainActivity extends Activity {
         Updater.onStart(this);   // the release app: a newer release on GitHub opens the update popup (once per process start: not on a resume or a rotation)
     }
 
-    /** Hide Android's status bar and landscape navigation rail for an uninterrupted console-style launcher. */
+    /** Hide the status bar, but keep Android navigation visible so its auto-rotate suggestion remains available. */
     @SuppressWarnings("deprecation")
     private void applyImmersiveMode() {
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                         | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
 
     @Override protected void onSaveInstanceState(Bundle out) {
