@@ -26,8 +26,8 @@ final class GameArtwork {
         }
         new Thread(() -> {
             File logo = findLogo(dump);
-            Bitmap icon = decode(findImage(logo, new String[]{"icon", "icon0", "game_icon", "cover", "title"}), 512);
-            Bitmap background = decode(findImage(logo, new String[]{"background", "bg", "banner"}), 1920);
+            Bitmap icon = decode(findImage(logo, new String[]{"icon", "icon0", "game_icon", "cover", "title"}, true), 512);
+            Bitmap background = decode(findImage(logo, new String[]{"background", "bg", "banner"}, false), 1920);
             Artwork artwork = new Artwork(icon, background);
             MAIN.post(() -> done.accept(artwork));
         }, "nx-game-artwork").start();
@@ -49,7 +49,7 @@ final class GameArtwork {
         return null;
     }
 
-    private static File findImage(File logo, String[] preferred) {
+    private static File findImage(File logo, String[] preferred, boolean allowFallback) {
         if (logo == null || !logo.isDirectory()) return null;
         for (String name : preferred) {
             File exact = new File(logo, name);
@@ -61,8 +61,20 @@ final class GameArtwork {
         }
         File backgroundDir = new File(logo, "background");
         File found = firstImage(backgroundDir);
-        if (found != null) return found;
-        return firstImage(logo);
+        if (found != null && !allowFallback) return found;
+        return allowFallback ? firstImageExceptBackground(logo) : null;
+    }
+
+    private static File firstImageExceptBackground(File logo) {
+        File[] files = logo.listFiles();
+        if (files == null) return null;
+        java.util.Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        for (File f : files) if (!f.isDirectory() && isImage(f) && !f.getName().toLowerCase(Locale.ROOT).contains("background")) return f;
+        for (File f : files) if (f.isDirectory() && !f.getName().equalsIgnoreCase("background")) {
+            File nested = firstImage(f);
+            if (nested != null) return nested;
+        }
+        return null;
     }
 
     private static File firstImage(File dir) {
