@@ -1158,18 +1158,14 @@ public final class MainActivity extends Activity {
         }, "nx-pack-check").start();
     }
 
-    /** Home card options: artwork and list actions live here, not in Game settings. */
+    /** Home card options: all four actions are shown together in one list. */
     private void homeOptions(Game g) {
         new AlertDialog.Builder(this).setTitle(g.name)
-                .setItems(new String[] {"Home screen", "Per-game settings"}, (d, which) -> {
-                    if (which == 0) {
-                        new AlertDialog.Builder(this).setTitle("Home screen · " + g.name)
-                                .setItems(new String[] {"Background", "Icon", "Remove from list"}, (x, action) -> {
-                                    if (action == 0) pickHomeArtwork(g, true);
-                                    else if (action == 1) pickHomeArtwork(g, false);
-                                    else removeGameFromList(g);
-                                }).setNegativeButton("Cancel", null).show();
-                    } else manage(g);
+                .setItems(new String[] {"Background", "Icon", "Per-game settings", "Remove from list"}, (d, which) -> {
+                    if (which == 0) pickHomeArtwork(g, true);
+                    else if (which == 1) pickHomeArtwork(g, false);
+                    else if (which == 2) manage(g);
+                    else removeGameFromList(g);
                 }).setNegativeButton("Cancel", null).show();
     }
 
