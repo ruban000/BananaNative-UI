@@ -139,15 +139,16 @@ final class SidePanel extends FrameLayout {
         exit.setContentDescription("Stop game and return to Banana Native");
         exit.setOnClickListener(v -> { animateTap(v); confirmStop(); });
         brand.addView(exit, new LinearLayout.LayoutParams(Math.round(48 * dp), Math.round(48 * dp)));
-        sh.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        brand.setBackgroundColor(0xD90F1B2B);
+        sh.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(66 * dp)));
         tabs = new LinearLayout(a);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackgroundColor(0xFF0A111D);
+        tabs.setBackgroundColor(0xB30A111D);
         sh.addView(tabs, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         sh.addView(scroll, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         addView(sh, new LayoutParams(PanelLook.widthPx(Prefs.panelSize(a), dp, a.getResources().getDisplayMetrics().widthPixels), LayoutParams.MATCH_PARENT, Gravity.END));
         sheet = sh;
-        getViewTreeObserver().addOnGlobalFocusChangeListener(this::focusMoved);
+
         setVisibility(GONE);
     }
 
@@ -285,26 +286,6 @@ final class SidePanel extends FrameLayout {
     }
 
     /** The focus frame: a yellow outline on the focused row of the panel (not in touch mode, where nothing has the focus) */
-    private void focusMoved(View old, View now) {
-        if (lit != null) {
-            View previous = lit;
-            previous.animate().cancel();
-            previous.animate().scaleX(1f).scaleY(1f).setDuration(150)
-                    .withEndAction(() -> { if (previous != lit) previous.setForeground(null); }).start();
-            lit = null;
-        }
-        if (now == null || !inside(now)) return;
-        float dp = getResources().getDisplayMetrics().density;
-        android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
-        d.setColor(0x1CEAF4FF);
-        d.setStroke(Math.round(1.7f * dp), FOCUS);
-        d.setCornerRadius(10 * dp);
-        now.setForeground(d);
-        now.animate().cancel();
-        now.animate().scaleX(1.012f).scaleY(1.012f).setDuration(220).start();
-        lit = now;
-    }
-
     /**
      * A dialog opened from the panel with a controller's confirm and back keys (on their press), as in the panel: Android's own fallback would take the bottom
      * button as confirm and the right one as back. Its focus starts on the safe choice (negative), so a confirm press does nothing that cannot be undone
@@ -343,12 +324,13 @@ final class SidePanel extends FrameLayout {
             t.setTextColor(on ? 0xFFFFFFFF : 0xFF9EADBF);
             GradientDrawable tabBg = new GradientDrawable();
             tabBg.setCornerRadius(14 * dp);
-            tabBg.setColor(on ? 0x333B5D7D : 0x000A111D);
-            tabBg.setStroke(Math.max(1, Math.round(dp)), on ? 0x99EAF4FF : 0x00000000);
+            tabBg.setColor(on ? 0x263E6B91 : 0x000A111D);
+            tabBg.setStroke(Math.max(1, Math.round(dp)), on ? 0x667FA8D2 : 0x00000000);
             t.setBackground(tabBg);
             t.setPadding(pad, Math.round(5 * dp), pad, Math.round(5 * dp));
             t.setSelected(on);
             t.setFocusable(true);
+            Ui.settingFocus(act, t, 12);
             t.setOnClickListener(v -> { animateTap(v); showTab(k); });
             t.setContentDescription(TAB_NAMES[i] + " tab, " + (i + 1) + " of " + TAB_NAMES.length + (on ? ", selected" : ""));
             tabs.addView(t, new LinearLayout.LayoutParams(0, h, 1f));
@@ -359,6 +341,7 @@ final class SidePanel extends FrameLayout {
         x.setTextSize(18);
         x.setTextColor(0xFFE8EAED);
         x.setFocusable(true);
+        Ui.settingFocus(act, x, 12);
         x.setOnClickListener(v -> close());
         x.setContentDescription("Close the panel, back to the game");
         tabs.addView(x, new LinearLayout.LayoutParams(h, h));
@@ -401,7 +384,13 @@ final class SidePanel extends FrameLayout {
         int size = Prefs.panelSize(act), w = PanelLook.widthPx(size, dp, getResources().getDisplayMetrics().widthPixels);
         if (sheet.getLayoutParams().width != w) { sheet.getLayoutParams().width = w; sheet.requestLayout(); }
         look(box, PanelLook.textScale(Prefs.panelText(act)), PanelLook.rowPx(size, dp));
+        attachPanelFocus(box);
     }
+    private void attachPanelFocus(View v) {
+        if (v.isFocusable() && v != this) Ui.settingFocus(act, v, 12);
+        if (v instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) v).getChildCount(); i++) attachPanelFocus(((ViewGroup) v).getChildAt(i));
+    }
+
     private static void look(View v, float text, int row) {
         if (v instanceof TextView) {
             TextView t = (TextView) v;
