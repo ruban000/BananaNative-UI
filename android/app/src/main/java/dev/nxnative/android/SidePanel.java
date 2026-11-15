@@ -161,11 +161,27 @@ final class SidePanel extends FrameLayout {
         FrameLayout.LayoutParams exitLp = new FrameLayout.LayoutParams(Math.round(58 * dp), Math.round(58 * dp), Gravity.BOTTOM | Gravity.RIGHT);
         exitLp.setMargins(0, 0, Math.round(22 * dp), Math.round(22 * dp));
         sh.addView(exit, exitLp);
+        final boolean[] tabsHidden = {false};
         scroll.setOnScrollChangeListener((View v, int sx, int sy, int oldSx, int oldSy) -> {
+            boolean scrollingDown = sy > oldSy + Math.round(2 * dp);
+            boolean scrollingUp = sy < oldSy - Math.round(2 * dp);
+            boolean hideTabs = sy > Math.round(24 * dp) && scrollingDown;
+            boolean revealTabs = sy <= Math.round(16 * dp) || scrollingUp;
+            if (hideTabs && !tabsHidden[0]) {
+                tabsHidden[0] = true;
+                tabs.animate().cancel();
+                tabs.animate().alpha(0f).translationY(-tabs.getHeight()).setDuration(150)
+                        .withEndAction(() -> { if (tabsHidden[0]) tabs.setVisibility(GONE); }).start();
+            } else if (revealTabs && tabsHidden[0]) {
+                tabsHidden[0] = false;
+                tabs.setVisibility(VISIBLE);
+                tabs.setAlpha(0f);
+                tabs.setTranslationY(-tabs.getHeight());
+                tabs.animate().alpha(1f).translationY(0f).setDuration(180).start();
+            }
             boolean compact = sy > Math.round(72 * dp);
-            float target = compact ? 0.72f : 1f;
-            brand.animate().alpha(target).translationY(compact ? -Math.round(8 * dp) : 0).setDuration(180).start();
-            brand.setVisibility(VISIBLE);
+            brand.animate().alpha(compact ? 0.78f : 1f)
+                    .translationY(compact ? -Math.round(5 * dp) : 0).setDuration(160).start();
             tabs.setElevation(compact ? 8 * dp : 2 * dp);
         });
         addView(sh, new LayoutParams(PanelLook.widthPx(Prefs.panelSize(a), dp, a.getResources().getDisplayMetrics().widthPixels), LayoutParams.MATCH_PARENT, Gravity.END));
@@ -455,8 +471,8 @@ final class SidePanel extends FrameLayout {
         h.setText(t);
         h.setTypeface(Typeface.DEFAULT_BOLD);
         h.setTextColor(0xFFEAF1FA);
-        h.setTextSize(15);
-        h.setPadding(0, Math.round(18 * getResources().getDisplayMetrics().density), 0, 0);
+        h.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        h.setPadding(0, Math.round(11 * getResources().getDisplayMetrics().density), 0, Math.round(2 * getResources().getDisplayMetrics().density));
         box.addView(h);
         return h;
     }
@@ -464,7 +480,7 @@ final class SidePanel extends FrameLayout {
     private TextView note(String t) {
         TextView n = new TextView(act);
         n.setText(t);
-        n.setTextSize(12);
+        n.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         n.setTextColor(0xFFA4B1C2);
         box.addView(n);
         return n;
