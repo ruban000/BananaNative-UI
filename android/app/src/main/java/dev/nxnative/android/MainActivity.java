@@ -146,6 +146,7 @@ public final class MainActivity extends Activity {
         FrameLayout frame = (FrameLayout) bananas.getParent();
         if (ambientBackground != null) ambientBackground.stop();
         while (frame.getChildCount() > 1) frame.removeViewAt(1);
+        homeArtworkView = null;
         boolean wide = getResources().getConfiguration().screenWidthDp >= 600;
         LinearLayout content = Ui.page(this, frame, settingsGame != null && wide ? 1040 : 640);
         android.widget.ScrollView backgroundHost = pageScroll();
@@ -155,15 +156,18 @@ public final class MainActivity extends Activity {
             if (resumed) ambientBackground.start();
             if (onHome()) {
                 backgroundHost.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+                View ambientLayer = new View(this);
+                ambientLayer.setBackground(ambientBackground);
+                frame.addView(ambientLayer, 1, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                 homeArtworkView = new ImageView(this);
                 homeArtworkView.setScaleType(ImageView.ScaleType.CENTER_CROP);
                 homeArtworkView.setAlpha(0f);
-                frame.addView(homeArtworkView, 1, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                frame.addView(homeArtworkView, 2, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                 View shade = new View(this);
                 shade.setBackground(new android.graphics.drawable.GradientDrawable(
                         android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
                         new int[]{0x33070D1B, 0x66070D1B, 0xB8080E1A, 0xF50B101B}));
-                frame.addView(shade, 2, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                frame.addView(shade, 3, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             }
         }
         if (settingsGame != null) for (Game x : Game.load(this)) if (x.gameDir.equals(settingsGame.gameDir)) { settingsGame = x; break; }   // its folders as they are now (Folders, Import pack)
@@ -594,9 +598,9 @@ public final class MainActivity extends Activity {
             merged = true;
             new Thread(() -> { if (Game.collapse(this)) runOnUiThread(() -> { if (!isFinishing()) refresh(); }); }, "nx-list-merge").start();
         }
-        if (selectedHomeGame == null || games.stream().noneMatch(g -> g.gameDir.equals(selectedHomeGame.gameDir))) {
-            selectedHomeGame = games.isEmpty() ? null : games.get(0);
-        }
+        boolean selectedStillExists = false;
+        if (selectedHomeGame != null) for (Game g : games) if (g.gameDir.equals(selectedHomeGame.gameDir)) { selectedStillExists = true; break; }
+        if (!selectedStillExists) selectedHomeGame = games.isEmpty() ? null : games.get(0);
         gameBox.removeAllViews();
         homeDetails = null;
         homeRail = new LinearLayout(this);
@@ -629,7 +633,8 @@ public final class MainActivity extends Activity {
         if (selectedHomeGame != null) showHomeGame(selectedHomeGame);
         else showEmptyHome();
         if (selectedHomeGame != null) setHomeArtwork(selectedHomeGame);
-        if (selectedHomeGame != null && homeRail.getChildCount() > 0) homeRail.getChildAt(0).requestFocus();
+        if (selectedHomeGame != null && homeRail.getChildCount() > 0 && homeRail.getChildAt(0) instanceof ViewGroup)
+            ((ViewGroup) homeRail.getChildAt(0)).getChildAt(0).requestFocus();
     }
 
     private View gameTile(Game g) {
@@ -641,6 +646,7 @@ public final class MainActivity extends Activity {
         tile.setFocusable(true);
         tile.setClickable(true);
         tile.setContentDescription(g.name + ", game cover");
+        tile.setTag(g.gameDir);
         tile.setBackground(Ui.round(0x55202C42, dp(18), 0x557D91B2, dp(1)));
         tile.setClipToOutline(true);
         tile.setOutlineProvider(new android.view.ViewOutlineProvider() {
@@ -729,7 +735,7 @@ public final class MainActivity extends Activity {
                 View item = homeRail.getChildAt(i);
                 if (item instanceof LinearLayout && ((LinearLayout) item).getChildCount() > 0) {
                     View tile = ((LinearLayout) item).getChildAt(0);
-                    boolean selected = tile.getContentDescription() != null && tile.getContentDescription().toString().equals(game.name + ", game cover");
+                    boolean selected = game.gameDir.equals(tile.getTag());
                     tile.animate().scaleX(selected ? 1.055f : 1f).scaleY(selected ? 1.055f : 1f).setDuration(180).start();
                 }
             }
@@ -765,18 +771,17 @@ public final class MainActivity extends Activity {
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
         heading.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView ready = Ui.chip(this, "READY");
-        ready.setTextColor(0xFFB9E9D0);
-        ready.setBackground(Ui.round(0x443A9B70, dp(999), 0x6672C99A, dp(1)));
-        heading.addView(ready);
+        TextView status = Ui.status(this, Profile.of(game.titleId) == null ? "Not supported" : "Checking…", R.color.bn_text_2);
+        status.setTextColor(Profile.of(game.titleId) == null ? 0xFFFFA0A0 : 0xFFB9E9D0);
+        Ui.pill(status).setBackground(Ui.round(0x443A9B70, dp(999), 0x6672C99A, dp(1)));
+        LinearLayout.LayoutParams statusLp = Ui.wrap();
+        statusLp.leftMargin = dp(12);
+        heading.addView(status, statusLp);
         detail.addView(heading);
 
         LinearLayout info = new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
         info.setPadding(0, dp(7), 0, 0);
-        TextView status = Ui.status(this, Profile.of(game.titleId) == null ? "Not in this app version" : "Checking…", R.color.bn_text_2);
-        status.setTextColor(Profile.of(game.titleId) == null ? 0xFFFFA0A0 : 0xFFB7C9E1);
-        info.addView(status);
         detail.addView(info);
 
         LinearLayout actions = new LinearLayout(this);
@@ -787,17 +792,17 @@ public final class MainActivity extends Activity {
         if (Profile.of(game.titleId) != null) {
             Ui.Action play = Ui.action(this, R.drawable.ic_play, "Play", Ui.Kind.QUIET, v -> launch(game));
             play.setMinimumHeight(dp(48));
-            play.setBackground(new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable playBg = new android.graphics.drawable.GradientDrawable(
                     android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-                    new int[]{0xEE315FAE, 0xEE183D78}) {{
-                        setCornerRadius(dp(999));
-                        setStroke(dp(1), 0xAA9FC4FF);
-                    }});
+                    new int[]{0xEE315FAE, 0xEE183D78});
+            playBg.setCornerRadius(dp(999));
+            playBg.setStroke(dp(1), 0xAA9FC4FF);
+            play.setBackground(playBg);
             play.setPadding(dp(20), 0, dp(22), 0);
             play.label.setTextColor(0xFFFFFFFF);
             play.icon.setImageTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
             Ui.ps5Focus(this, play, 999);
-            actions.addView(play, actionLp);
+            actions.addView(play, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             check(game, status, play, info);
         } else {
             TextView missing = Ui.body(this, Profile.missing(game.titleId, game.name));
