@@ -48,7 +48,7 @@ final class SidePanel extends FrameLayout {
     static final String[] TAB_NAMES = {"Performance", "Display", "Controls", "General"};
     private static final int TAB_PERF = 0, TAB_DISPLAY = 1, TAB_CONTROLS = 2, TAB_GENERAL = 3;
     private int tab = TAB_PERF;
-    private static final int FOCUS = 0xFF9B8CFF;   // violet accent for the selected tab and controller focus
+    private static final int FOCUS = 0xFFEAF4FF;   // restrained PS5 white focus rim
     private static final String UI_PREFS = "banana_native_side_panel";
     private static final String UI_ANIMATIONS = "menu_button_animations";
     private boolean animationsEnabled() {
@@ -80,12 +80,14 @@ final class SidePanel extends FrameLayout {
     private static final int ID_SIZE = 5000, ID_TEXT = 5100, ID_FIT = 5200, ID_MAP = 5300, ID_ONE = 5400, ID_RES = 5500, ID_RES_PRESET = 5590;
 
     /** A deep navy glass-like surface for the in-game overlay. */
-    private static GradientDrawable makePanelBackground() {
+    private float actDensityPlaceholder() { return getResources().getDisplayMetrics().density; }
+
+    private GradientDrawable makePanelBackground() {
         GradientDrawable bg = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[] {0xF5182638, 0xF50B1422, 0xF5162233});
-        bg.setCornerRadius(0);
-        bg.setStroke(1, 0x5579A9D8);
+                new int[] {0xF51A1730, 0xF20B1422, 0xF20D1A2B});
+        bg.setCornerRadius(22 * actDensityPlaceholder());
+        bg.setStroke(1, 0x557F9BB8);
         return bg;
     }
 
@@ -95,7 +97,7 @@ final class SidePanel extends FrameLayout {
         this.rows = rows;
         float dp = getResources().getDisplayMetrics().density;
         View scrim = new View(a);
-        scrim.setBackgroundColor(0x99050A18);
+        scrim.setBackgroundColor(0xAA02050B);
         scrim.setOnClickListener(v -> close());
         addView(scrim, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         box = new LinearLayout(a);
@@ -104,9 +106,11 @@ final class SidePanel extends FrameLayout {
         box.setPadding(p, p, p, p);
         scroll = new ScrollView(a);
         scroll.addView(box);
-        LinearLayout sh = new LinearLayout(a);   // the tab bar fixed at the top, the tab's rows scrolling under it
-        sh.setOrientation(LinearLayout.VERTICAL);
+        FrameLayout sh = new FrameLayout(a);
         sh.setBackground(makePanelBackground());
+        LinearLayout content = new LinearLayout(a);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setBackgroundColor(0x00000000);
         LinearLayout brand = new LinearLayout(a);
         brand.setOrientation(LinearLayout.HORIZONTAL);
         brand.setGravity(Gravity.CENTER_VERTICAL);
@@ -120,24 +124,76 @@ final class SidePanel extends FrameLayout {
         brand.addView(brandTitle, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
         TextView live = new TextView(a);
         live.setText("●  IN GAME");
-        live.setTextColor(0xFF9FE5C2);
+        live.setTextColor(0xFFB9C8D9);
         live.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         live.setTypeface(Typeface.DEFAULT_BOLD);
         live.setPadding(Math.round(9 * dp), Math.round(6 * dp), Math.round(9 * dp), Math.round(6 * dp));
         GradientDrawable liveBg = new GradientDrawable();
-        liveBg.setColor(0x222CCB86);
+        liveBg.setColor(0x222F4C69);
         liveBg.setCornerRadius(999 * dp);
         live.setBackground(liveBg);
         brand.addView(live, new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-        sh.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        TextView closePanel = new TextView(a);
+        closePanel.setText("×");
+        closePanel.setTextColor(0xFFEAF1FA);
+        closePanel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        closePanel.setGravity(Gravity.CENTER);
+        closePanel.setFocusable(true);
+        closePanel.setContentDescription("Close in-game menu");
+        closePanel.setBackground(makeRailActionBackground(dp));
+        LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(Math.round(38 * dp), Math.round(38 * dp));
+        closeLp.leftMargin = Math.round(9 * dp);
+        brand.addView(closePanel, closeLp);
+        closePanel.setOnClickListener(v -> close());
+        // Exit is a floating action at the lower-right, away from the tab navigation.
+        brand.setBackgroundColor(0xD90F1B2B);
+        content.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(66 * dp)));
+        LinearLayout body = new LinearLayout(a);
+        body.setOrientation(LinearLayout.HORIZONTAL);
+        body.setBackgroundColor(0x00000000);
         tabs = new LinearLayout(a);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackgroundColor(0xFF101B2A);
-        sh.addView(tabs, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        sh.addView(scroll, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
-        addView(sh, new LayoutParams(PanelLook.widthPx(Prefs.panelSize(a), dp, a.getResources().getDisplayMetrics().widthPixels), LayoutParams.MATCH_PARENT, Gravity.END));
+        tabs.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable railBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[] {0xE91A1835, 0xE90D1727, 0xE90B1422});
+        tabs.setBackground(railBg);
+        tabs.setPadding(Math.round(5 * dp), Math.round(10 * dp), Math.round(5 * dp), Math.round(10 * dp));
+        body.addView(tabs, new LinearLayout.LayoutParams(Math.round(100 * dp), LayoutParams.MATCH_PARENT));
+        scroll.setClipToPadding(false);
+        scroll.setFillViewport(false);
+        scroll.setBackgroundColor(0x00000000);
+        scroll.setPadding(Math.round(14 * dp), Math.round(8 * dp), Math.round(14 * dp), Math.round(22 * dp));
+        body.addView(scroll, new LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f));
+        content.addView(body, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
+        sh.addView(content, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        TextView exit = new TextView(a);
+        exit.setText("↗");
+        exit.setTextColor(0xFFF4F7FC);
+        exit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 23);
+        exit.setGravity(Gravity.CENTER);
+        exit.setFocusable(true);
+        exit.setContentDescription("Stop game and return to Banana Native");
+        GradientDrawable exitBg = new GradientDrawable();
+        exitBg.setColor(0xE6122032);
+        exitBg.setCornerRadius(999 * dp);
+        exitBg.setStroke(Math.max(1, Math.round(dp)), 0x887FA8D2);
+        exit.setBackground(exitBg);
+        exit.setElevation(12 * dp);
+        exit.setOnClickListener(v -> { animateTap(v); confirmStop(); });
+
+        int panelWidth = PanelLook.widthPx(Prefs.panelSize(a), dp, a.getResources().getDisplayMetrics().widthPixels);
+        int exitSize = Math.round(58 * dp);
+        FrameLayout.LayoutParams exitLp = new FrameLayout.LayoutParams(exitSize, exitSize, Gravity.BOTTOM | Gravity.RIGHT);
+        // Anchor the floating action to the panel's left edge; half the circle sits outside over the game.
+        exitLp.setMargins(0, 0, Math.max(0, panelWidth - exitSize / 2), Math.round(22 * dp));
+        addView(exit, exitLp);
+        // Navigation rail is fixed; only the settings column scrolls. No hide/show animation
+        // means scroll direction changes cannot cause layout jumps or visual jitter.
+        scroll.setOnScrollChangeListener((View v, int sx, int sy, int oldSx, int oldSy) -> {
+            brandTitle.setAlpha(sy > Math.round(72 * dp) ? 0.92f : 1f);
+        });
+        addView(sh, new LayoutParams(panelWidth, LayoutParams.MATCH_PARENT, Gravity.END));
         sheet = sh;
-        getViewTreeObserver().addOnGlobalFocusChangeListener(this::focusMoved);
+
         setVisibility(GONE);
     }
 
@@ -275,26 +331,6 @@ final class SidePanel extends FrameLayout {
     }
 
     /** The focus frame: a yellow outline on the focused row of the panel (not in touch mode, where nothing has the focus) */
-    private void focusMoved(View old, View now) {
-        if (lit != null) {
-            View previous = lit;
-            previous.animate().cancel();
-            previous.animate().scaleX(1f).scaleY(1f).setDuration(150)
-                    .withEndAction(() -> { if (previous != lit) previous.setForeground(null); }).start();
-            lit = null;
-        }
-        if (now == null || !inside(now)) return;
-        float dp = getResources().getDisplayMetrics().density;
-        android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
-        d.setColor(0x229B8CFF);
-        d.setStroke(Math.round(2.5f * dp), FOCUS);
-        d.setCornerRadius(10 * dp);
-        now.setForeground(d);
-        now.animate().cancel();
-        now.animate().scaleX(1.018f).scaleY(1.018f).setDuration(180).start();
-        lit = now;
-    }
-
     /**
      * A dialog opened from the panel with a controller's confirm and back keys (on their press), as in the panel: Android's own fallback would take the bottom
      * button as confirm and the right one as back. Its focus starts on the safe choice (negative), so a confirm press does nothing that cannot be undone
@@ -317,59 +353,52 @@ final class SidePanel extends FrameLayout {
     private void tabBar() {
         tabs.removeAllViews();
         float dp = getResources().getDisplayMetrics().density;
-        int h = Math.max(Math.round(58 * dp), PanelLook.rowPx(Prefs.panelSize(act), dp)), pad = Math.round(3 * dp);
+        int itemHeight = Math.round(72 * dp);
+        String[] glyphs = {"◷", "▣", "⌖", "☰"};
         for (int i = 0; i < TAB_NAMES.length; i++) {
             int k = i;
             boolean on = i == tab;
-            TextView t = new TextView(act);
-            String[] glyphs = {"⚡", "▣", "⌖", "☷"};
-            t.setText(glyphs[i] + "\n" + TAB_NAMES[i]);
-            t.setGravity(Gravity.CENTER);
-            t.setMaxLines(2);
-            t.setIncludeFontPadding(false);
-            t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);   // compact icon-and-label navigation
-            t.setPadding(pad, 0, pad, 0);
-            t.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-            t.setTextColor(on ? 0xFFECF4FF : 0xFFB5C2D2);
-            GradientDrawable tabBg = new GradientDrawable();
-            tabBg.setCornerRadius(14 * dp);
-            tabBg.setColor(on ? 0xFF397FD0 : 0x00101B2A);
-            t.setBackground(tabBg);
-            t.setPadding(pad, Math.round(5 * dp), pad, Math.round(5 * dp));
-            t.setSelected(on);
-            t.setFocusable(true);
-            t.setOnClickListener(v -> { animateTap(v); showTab(k); });
-            t.setContentDescription(TAB_NAMES[i] + " tab, " + (i + 1) + " of " + TAB_NAMES.length + (on ? ", selected" : ""));
-            tabs.addView(t, new LinearLayout.LayoutParams(0, h, 1f));
+            LinearLayout item = new LinearLayout(act);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setGravity(Gravity.CENTER);
+            item.setPadding(Math.round(3 * dp), Math.round(7 * dp), Math.round(3 * dp), Math.round(7 * dp));
+            TextView icon = new TextView(act);
+            icon.setText(glyphs[i]);
+            icon.setGravity(Gravity.CENTER);
+            icon.setIncludeFontPadding(false);
+            icon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+            icon.setTextColor(on ? 0xFFF4F6FF : 0xFF9EADBF);
+            item.addView(icon, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(25 * dp)));
+            TextView label = new TextView(act);
+            label.setText(TAB_NAMES[i]);
+            label.setGravity(Gravity.CENTER);
+            label.setIncludeFontPadding(false);
+            label.setMaxLines(2);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            label.setTextColor(on ? 0xFFFFFFFF : 0xFF9EADBF);
+            label.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            item.addView(label, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+            GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    on ? new int[] {0x654C3D91, 0x55305D9B} : new int[] {0x00000000, 0x00000000});
+            bg.setCornerRadius(13 * dp);
+            bg.setStroke(Math.max(1, Math.round(dp)), on ? 0x887E9DFF : 0x00000000);
+            item.setBackground(bg);
+            item.setFocusable(true);
+            item.setClickable(true);
+            item.setOnClickListener(v -> { animateTap(v); showTab(k); });
+            item.setContentDescription(TAB_NAMES[i] + " tab, " + (i + 1) + " of " + TAB_NAMES.length + (on ? ", selected" : ""));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, itemHeight);
+            lp.bottomMargin = Math.round(6 * dp);
+            tabs.addView(item, lp);
         }
-        TextView x = new TextView(act);
-        x.setText("✕");
-        x.setGravity(Gravity.CENTER);
-        x.setTextSize(18);
-        x.setTextColor(0xFFE8EAED);
-        x.setFocusable(true);
-        x.setOnClickListener(v -> close());
-        x.setContentDescription("Close the panel, back to the game");
-        tabs.addView(x, new LinearLayout.LayoutParams(h, h));
-        tabs.post(this::tabTextSize);
     }
 
-    /** One text size for all tab labels: the largest (16 sp at most, 10 at least) at which the widest label, in bold as when selected, fits its tab.
-     *  Auto-sizing each label on its own shrank "Performance" alone and set it lower than the others */
-    private void tabTextSize() {
-        if (tabs.getChildCount() <= TAB_NAMES.length) return;
-        float sp = getResources().getDisplayMetrics().scaledDensity, fit = 11;
-        android.graphics.Paint p = new android.graphics.Paint();
-        p.setTypeface(Typeface.DEFAULT_BOLD);
-        p.setTextSize(11 * sp);
-        for (int i = 0; i < TAB_NAMES.length; i++) {
-            TextView t = (TextView) tabs.getChildAt(i);
-            int room = t.getWidth() - t.getPaddingLeft() - t.getPaddingRight();
-            float w = p.measureText(TAB_NAMES[i]);
-            if (room > 0 && w > room) fit = Math.min(fit, 11 * room / w);
-        }
-        float size = Math.max(9, (float) Math.floor(fit * 2) / 2);
-        for (int i = 0; i < TAB_NAMES.length; i++) ((TextView) tabs.getChildAt(i)).setTextSize(TypedValue.COMPLEX_UNIT_SP, size);
+    private GradientDrawable makeRailActionBackground(float dp) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0x221B2B42);
+        bg.setCornerRadius(13 * dp);
+        bg.setStroke(Math.max(1, Math.round(dp)), 0x447F9BB8);
+        return bg;
     }
 
     /** Another tab: its rows built, scrolled to its top; with a controller the focus on its first row */
@@ -390,13 +419,30 @@ final class SidePanel extends FrameLayout {
         int size = Prefs.panelSize(act), w = PanelLook.widthPx(size, dp, getResources().getDisplayMetrics().widthPixels);
         if (sheet.getLayoutParams().width != w) { sheet.getLayoutParams().width = w; sheet.requestLayout(); }
         look(box, PanelLook.textScale(Prefs.panelText(act)), PanelLook.rowPx(size, dp));
+        attachPanelFocus(box);
     }
+    private void attachPanelFocus(View v) {
+        if (v.isFocusable() && v != this && v.getParent() != tabs) Ui.settingFocus(act, v, 12);
+        if (v instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) v).getChildCount(); i++) attachPanelFocus(((ViewGroup) v).getChildAt(i));
+    }
+
     private static void look(View v, float text, int row) {
         if (v instanceof TextView) {
             TextView t = (TextView) v;
             if (text != 1f) t.setTextSize(TypedValue.COMPLEX_UNIT_PX, t.getTextSize() * text);
             if (v instanceof Button || v instanceof CompoundButton) t.setMinHeight(row);
-        } else if (v instanceof SeekBar) v.setMinimumHeight(row);
+            if (v instanceof Button || v instanceof CompoundButton) t.setTextColor(0xFFF1F5FA);
+            if (v instanceof CompoundButton) {
+                int[][] states = new int[][] { new int[] { android.R.attr.state_checked }, new int[] {} };
+                int[] colors = new int[] { 0xFFDCEBFF, 0xFF9AA9BC };
+                ((CompoundButton) v).setButtonTintList(new android.content.res.ColorStateList(states, colors));
+            }
+        } else if (v instanceof SeekBar) {
+            v.setMinimumHeight(row);
+            ((SeekBar) v).setProgressTintList(android.content.res.ColorStateList.valueOf(0xFFDCEBFF));
+            ((SeekBar) v).setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFF4F7FC));
+            ((SeekBar) v).setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0x557C8FA8));
+        }
         if (v instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) v).getChildCount(); i++) look(((ViewGroup) v).getChildAt(i), text, row);
     }
 
@@ -421,8 +467,9 @@ final class SidePanel extends FrameLayout {
         TextView h = new TextView(act);
         h.setText(t);
         h.setTypeface(Typeface.DEFAULT_BOLD);
-        h.setTextSize(15);
-        h.setPadding(0, Math.round(18 * getResources().getDisplayMetrics().density), 0, 0);
+        h.setTextColor(0xFFEAF1FA);
+        h.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        h.setPadding(0, Math.round(11 * getResources().getDisplayMetrics().density), 0, Math.round(2 * getResources().getDisplayMetrics().density));
         box.addView(h);
         return h;
     }
@@ -430,8 +477,8 @@ final class SidePanel extends FrameLayout {
     private TextView note(String t) {
         TextView n = new TextView(act);
         n.setText(t);
-        n.setTextSize(12);
-        n.setTextColor(Color.LTGRAY);
+        n.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        n.setTextColor(0xFFA4B1C2);
         box.addView(n);
         return n;
     }
@@ -579,6 +626,18 @@ final class SidePanel extends FrameLayout {
         });
     }
 
+    /** A single safe exit path for the header power icon and General › Stop. */
+    private void confirmStop() {
+        padDialog(new AlertDialog.Builder(act).setTitle("Stop the game?")
+                .setMessage("The game will close and return to Banana Native. Unsaved progress may be lost.")
+                .setPositiveButton("Stop game", (d, w) -> {
+                    Native.note("stopped by the user");
+                    if (act instanceof GameActivity) ((GameActivity) act).stopFromPanel();
+                    else act.finish();
+                })
+                .setNegativeButton("Keep playing", null).show());
+    }
+
     /** General: panel appearance, animation preference, Pause, Stop and Back to the game */
     private void general() {
         note("The game runs on behind this panel; every change applies now and is kept, except those marked for the next start.");
@@ -595,7 +654,7 @@ final class SidePanel extends FrameLayout {
 
         Button pause = new Button(act);   // the game suspended (clock, graphics, threads, audio) until a tap on the screen, or A / Start: GameActivity.pause
         pause.setText("Ⅱ   Pause the game");
-        actionButton(pause, 0xFF1D3552, 0xFF5B9FE8, 0xFFF0F6FF);
+        actionButton(pause, 0xFF17263A, 0x667C9BB9, 0xFFF2F6FC);
         pause.setOnClickListener(v -> { close(); if (act instanceof GameActivity) ((GameActivity) act).pause(); });
         LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         pl.topMargin = Math.round(24 * getResources().getDisplayMetrics().density);
@@ -607,16 +666,14 @@ final class SidePanel extends FrameLayout {
         box.addView(ret);
         Button stop = new Button(act);
         stop.setText("■   Stop the game");
-        actionButton(stop, 0xFF3A202B, 0xFFB94B62, 0xFFFFE8EC);
-        stop.setOnClickListener(v -> padDialog(new AlertDialog.Builder(act).setTitle("Stop the game?").setMessage("The game ends; unsaved progress is lost. The log stays for Share log.")
-                .setPositiveButton("Stop", (d, w) -> { Native.note("stopped by the user"); ExitWatch.stopped(); if (act instanceof GameActivity) ((GameActivity) act).backToFrontend(); android.os.Process.killProcess(android.os.Process.myPid()); })
-                .setNegativeButton("Keep running", null).show()));
+        actionButton(stop, 0xFF241923, 0x668E6674, 0xFFFFEDF1);
+        stop.setOnClickListener(v -> confirmStop());
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.topMargin = Math.round(24 * getResources().getDisplayMetrics().density);
         box.addView(stop, lp);
         Button done = new Button(act);
         done.setText("↩   Back to the game");
-        actionButton(done, 0xFF202B3D, 0xFF526987, 0xFFE7EFFB);
+        actionButton(done, 0xFF121E2D, 0x557C9BB9, 0xFFE7EFFB);
         done.setOnClickListener(v -> close());
         box.addView(done, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
     }
