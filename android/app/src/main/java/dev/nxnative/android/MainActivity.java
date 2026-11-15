@@ -942,7 +942,7 @@ public final class MainActivity extends Activity {
         Ui.pill(st).setBackground(Ui.round(0xFF18385D, dp(999), 0xFF315A83, dp(1)));
         info.addView(st, sp);
         top.addView(info, Ui.weight());
-        top.addView(Ui.more(this, "Options for " + g.name, v -> homeOptions(g)));
+        top.addView(Ui.more(this, "Options for " + g.name, v -> homeOptions(g, v)));
         c.addView(top);
         item.addView(c, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         Ui.Action play = Ui.action(this, R.drawable.ic_play, "Play", Ui.Kind.PRIMARY, v -> launch(g));
@@ -1158,15 +1158,14 @@ public final class MainActivity extends Activity {
         }, "nx-pack-check").start();
     }
 
-    /** Home card options: all four actions are shown together in one list. */
-    private void homeOptions(Game g) {
-        new AlertDialog.Builder(this).setTitle(g.name)
-                .setItems(new String[] {"Background", "Icon", "Per-game settings", "Remove from list"}, (d, which) -> {
-                    if (which == 0) pickHomeArtwork(g, true);
-                    else if (which == 1) pickHomeArtwork(g, false);
-                    else if (which == 2) manage(g);
-                    else removeGameFromList(g);
-                }).setNegativeButton("Cancel", null).show();
+    /** Home card ⋯: show an anchored menu; never open settings until that row is selected. */
+    private void homeOptions(Game g, View anchor) {
+        android.widget.PopupMenu menu = new android.widget.PopupMenu(this, anchor);
+        menu.getMenu().add("Background").setOnMenuItemClickListener(item -> { pickHomeArtwork(g, true); return true; });
+        menu.getMenu().add("Icon").setOnMenuItemClickListener(item -> { pickHomeArtwork(g, false); return true; });
+        menu.getMenu().add("Per-game settings").setOnMenuItemClickListener(item -> { manage(g); return true; });
+        menu.getMenu().add("Remove from list").setOnMenuItemClickListener(item -> { removeGameFromList(g); return true; });
+        menu.show();
     }
 
     /** The game's Manage sheet, also from its progress card's ⋯ while it is being prepared (Ondevice) */
