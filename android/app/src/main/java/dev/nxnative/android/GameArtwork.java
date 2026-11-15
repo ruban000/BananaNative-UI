@@ -9,7 +9,7 @@ import java.io.File;
 import java.util.Locale;
 import java.util.function.Consumer;
 
-/** Reads optional cover and background artwork from a selected Switch dump's RomFS Logo folder. */
+/** Reads optional cover and background artwork from anywhere inside a selected Switch dump. */
 final class GameArtwork {
     static final class Artwork {
         final Bitmap icon, background;
@@ -47,7 +47,6 @@ final class GameArtwork {
             int score = 0;
             if (background) { if (isBackground) score += 100; if (isLogo) score -= 100; }
             else { if (isLogo) score += 100; if (isBackground) score -= 100; }
-            if (path.contains("/romfs/logo/")) score += 20;
             if (score > bestScore) { bestScore = score; best = file; }
         }
         if (bestScore <= 0 && !background) return matches.isEmpty() ? null : matches.get(0);
