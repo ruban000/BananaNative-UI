@@ -600,7 +600,10 @@ public final class MainActivity extends Activity {
         }
         boolean selectedStillExists = false;
         if (selectedHomeGame != null) for (Game g : games) if (g.gameDir.equals(selectedHomeGame.gameDir)) { selectedStillExists = true; break; }
-        if (!selectedStillExists) selectedHomeGame = games.isEmpty() ? null : games.get(0);
+        if (!selectedStillExists) {
+            selectedHomeGame = null;
+            for (Game g : games) if (selectedHomeGame == null || g.used > selectedHomeGame.used) selectedHomeGame = g;
+        }
         gameBox.removeAllViews();
         homeDetails = null;
         homeRail = new LinearLayout(this);
@@ -621,7 +624,7 @@ public final class MainActivity extends Activity {
 
         for (Game g : games) {
             View tile = gameTile(g);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(104), ViewGroup.LayoutParams.WRAP_CONTENT);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(116), ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.setMarginEnd(dp(16));
             homeRail.addView(tile, lp);
         }
@@ -662,8 +665,11 @@ public final class MainActivity extends Activity {
         fallback.setGravity(Gravity.CENTER);
         fallback.setTextColor(0xFFE8F0FF);
         tile.addView(fallback, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        LinearLayout.LayoutParams tileLp = new LinearLayout.LayoutParams(dp(96), dp(96));
+        LinearLayout.LayoutParams tileLp = new LinearLayout.LayoutParams(dp(110), dp(110));
         tileLp.gravity = Gravity.CENTER_HORIZONTAL;
+        boolean selectedInitially = selectedHomeGame != null && selectedHomeGame.gameDir.equals(g.gameDir);
+        tile.setScaleX(selectedInitially ? 1f : 0.873f);
+        tile.setScaleY(selectedInitially ? 1f : 0.873f);
         wrap.addView(tile, tileLp);
         TextView label = Ui.small(this, g.name);
         label.setTextColor(0xFFD5DFEF);
@@ -678,9 +684,8 @@ public final class MainActivity extends Activity {
         tile.setOnClickListener(v -> select.run());
         tile.setOnFocusChangeListener((v, focused) -> {
             if (focused) select.run();
-            tile.animate().scaleX(focused || (selectedHomeGame != null && selectedHomeGame.gameDir.equals(g.gameDir)) ? 1.055f : 1f)
-                    .scaleY(focused || (selectedHomeGame != null && selectedHomeGame.gameDir.equals(g.gameDir)) ? 1.055f : 1f)
-                    .setDuration(180).start();
+            float scale = focused || (selectedHomeGame != null && selectedHomeGame.gameDir.equals(g.gameDir)) ? 1f : 0.873f;
+            tile.animate().scaleX(scale).scaleY(scale).setDuration(180).start();
         });
         Ui.ps5Focus(this, tile, 18);
         if (Nup.isNup(new File(g.gameDir)) || Nup.picked(new File(g.gameDir))) {
@@ -692,8 +697,9 @@ public final class MainActivity extends Activity {
             });
         } else {
             GameArtwork.load(new File(g.gameDir), art -> {
-                if (tile.getParent() != null && art.icon != null) {
-                    cover.setImageBitmap(art.icon);
+                android.graphics.Bitmap image = art.icon != null ? art.icon : art.background;
+                if (tile.getParent() != null && image != null) {
+                    cover.setImageBitmap(image);
                     fallback.setVisibility(View.GONE);
                 }
             });
@@ -736,7 +742,7 @@ public final class MainActivity extends Activity {
                 if (item instanceof LinearLayout && ((LinearLayout) item).getChildCount() > 0) {
                     View tile = ((LinearLayout) item).getChildAt(0);
                     boolean selected = game.gameDir.equals(tile.getTag());
-                    tile.animate().scaleX(selected ? 1.055f : 1f).scaleY(selected ? 1.055f : 1f).setDuration(180).start();
+                    tile.animate().scaleX(selected ? 1f : 0.873f).scaleY(selected ? 1f : 0.873f).setDuration(180).start();
                 }
             }
         }
