@@ -104,9 +104,11 @@ final class SidePanel extends FrameLayout {
         box.setPadding(p, p, p, p);
         scroll = new ScrollView(a);
         scroll.addView(box);
-        LinearLayout sh = new LinearLayout(a);   // the tab bar fixed at the top, the tab's rows scrolling under it
-        sh.setOrientation(LinearLayout.VERTICAL);
+        FrameLayout sh = new FrameLayout(a);
         sh.setBackground(makePanelBackground());
+        LinearLayout content = new LinearLayout(a);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setBackgroundColor(0x00000000);
         LinearLayout brand = new LinearLayout(a);
         brand.setOrientation(LinearLayout.HORIZONTAL);
         brand.setGravity(Gravity.CENTER_VERTICAL);
@@ -129,23 +131,40 @@ final class SidePanel extends FrameLayout {
         liveBg.setCornerRadius(999 * dp);
         live.setBackground(liveBg);
         brand.addView(live, new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-        TextView exit = new TextView(a);
-        exit.setText("⏻");
-        exit.setTextColor(0xFFF1F5FA);
-        exit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 25);
-        exit.setGravity(Gravity.CENTER);
-        exit.setFocusable(true);
-        exit.setPadding(Math.round(12 * dp), 0, Math.round(4 * dp), 0);
-        exit.setContentDescription("Stop game and return to Banana Native");
-        exit.setOnClickListener(v -> { animateTap(v); confirmStop(); });
-        brand.addView(exit, new LinearLayout.LayoutParams(Math.round(48 * dp), Math.round(48 * dp)));
+        // Exit is a floating action at the lower-right, away from the tab navigation.
         brand.setBackgroundColor(0xD90F1B2B);
-        sh.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(66 * dp)));
+        content.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(66 * dp)));
         tabs = new LinearLayout(a);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
         tabs.setBackgroundColor(0xB30A111D);
-        sh.addView(tabs, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        sh.addView(scroll, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        content.addView(tabs, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.round(58 * dp)));
+        content.addView(scroll, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        sh.addView(content, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        TextView exit = new TextView(a);
+        exit.setText("⏻");
+        exit.setTextColor(0xFFF4F7FC);
+        exit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 23);
+        exit.setGravity(Gravity.CENTER);
+        exit.setFocusable(true);
+        exit.setContentDescription("Stop game and return to Banana Native");
+        GradientDrawable exitBg = new GradientDrawable();
+        exitBg.setColor(0xE6122032);
+        exitBg.setCornerRadius(999 * dp);
+        exitBg.setStroke(Math.max(1, Math.round(dp)), 0x887FA8D2);
+        exit.setBackground(exitBg);
+        exit.setElevation(12 * dp);
+        exit.setOnClickListener(v -> { animateTap(v); confirmStop(); });
+        Ui.settingFocus(act, exit, 24);
+        FrameLayout.LayoutParams exitLp = new FrameLayout.LayoutParams(Math.round(58 * dp), Math.round(58 * dp), Gravity.BOTTOM | Gravity.RIGHT);
+        exitLp.setMargins(0, 0, Math.round(22 * dp), Math.round(22 * dp));
+        sh.addView(exit, exitLp);
+        scroll.setOnScrollChangeListener((View v, int sx, int sy, int oldSx, int oldSy) -> {
+            boolean compact = sy > Math.round(72 * dp);
+            float target = compact ? 0.72f : 1f;
+            brand.animate().alpha(target).translationY(compact ? -Math.round(8 * dp) : 0).setDuration(180).start();
+            brand.setVisibility(VISIBLE);
+            tabs.setElevation(compact ? 8 * dp : 2 * dp);
+        });
         addView(sh, new LayoutParams(PanelLook.widthPx(Prefs.panelSize(a), dp, a.getResources().getDisplayMetrics().widthPixels), LayoutParams.MATCH_PARENT, Gravity.END));
         sheet = sh;
 
