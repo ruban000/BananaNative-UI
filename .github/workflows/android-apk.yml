@@ -32,6 +32,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
+
+      - name: Include the UI base branch for joystick theme builds
+        if: github.ref_name == 'feature/on-screen-joystick-themes'
+        shell: bash
+        run: |
+          git fetch origin feature/application-ui-next
+          git merge --no-edit origin/feature/application-ui-next
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
