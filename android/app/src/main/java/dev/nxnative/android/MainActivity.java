@@ -713,6 +713,12 @@ public final class MainActivity extends Activity {
                     fallback.setVisibility(View.GONE);
                 }
             });
+            GameArtwork.load(this, new File(g.gameDir), art -> {
+                if (tile.getParent() != null && art.icon != null) {
+                    cover.setImageBitmap(art.icon);
+                    fallback.setVisibility(View.GONE);
+                }
+            });
         } else {
             GameArtwork.load(this, new File(g.gameDir), art -> {
                 android.graphics.Bitmap image = art.icon != null ? art.icon : art.background;
