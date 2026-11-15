@@ -162,22 +162,42 @@ final class SidePanel extends FrameLayout {
         exitLp.setMargins(0, 0, Math.round(22 * dp), Math.round(22 * dp));
         sh.addView(exit, exitLp);
         final boolean[] tabsHidden = {false};
+        final int[] scrollDirection = {0};
+        final int[] directionTravel = {0};
+        final boolean[] tabsAnimating = {false};
+        final int directionThreshold = Math.round(14 * dp);
         scroll.setOnScrollChangeListener((View v, int sx, int sy, int oldSx, int oldSy) -> {
-            boolean scrollingDown = sy > oldSy + Math.round(2 * dp);
-            boolean scrollingUp = sy < oldSy - Math.round(2 * dp);
-            boolean hideTabs = sy > Math.round(24 * dp) && scrollingDown;
-            boolean revealTabs = sy <= Math.round(16 * dp) || scrollingUp;
-            if (hideTabs && !tabsHidden[0]) {
-                tabsHidden[0] = true;
-                tabs.animate().cancel();
-                tabs.animate().alpha(0f).translationY(-tabs.getHeight()).setDuration(150)
-                        .withEndAction(() -> { if (tabsHidden[0]) tabs.setVisibility(GONE); }).start();
-            } else if (revealTabs && tabsHidden[0]) {
-                tabsHidden[0] = false;
-                tabs.setVisibility(VISIBLE);
-                tabs.setAlpha(0f);
-                tabs.setTranslationY(-tabs.getHeight());
-                tabs.animate().alpha(1f).translationY(0f).setDuration(180).start();
+            int delta = sy - oldSy;
+            if (Math.abs(delta) > 0) {
+                int direction = delta > 0 ? 1 : -1;
+                if (direction != scrollDirection[0]) {
+                    scrollDirection[0] = direction;
+                    directionTravel[0] = 0;
+                }
+                directionTravel[0] += Math.abs(delta);
+            }
+            if (!tabsAnimating[0] && directionTravel[0] >= directionThreshold) {
+                boolean shouldHide = scrollDirection[0] > 0 && sy > Math.round(40 * dp);
+                boolean shouldReveal = scrollDirection[0] < 0;
+                directionTravel[0] = 0;
+                if (shouldHide && !tabsHidden[0]) {
+                    tabsHidden[0] = true;
+                    tabsAnimating[0] = true;
+                    tabs.animate().cancel();
+                    tabs.animate().alpha(0f).translationY(-tabs.getHeight()).setDuration(170)
+                            .withEndAction(() -> {
+                                tabs.setVisibility(INVISIBLE); // keep its layout space: no scroll-range jump
+                                tabsAnimating[0] = false;
+                            }).start();
+                } else if (shouldReveal && tabsHidden[0]) {
+                    tabsHidden[0] = false;
+                    tabsAnimating[0] = true;
+                    tabs.setVisibility(VISIBLE);
+                    tabs.setAlpha(0f);
+                    tabs.setTranslationY(-tabs.getHeight());
+                    tabs.animate().alpha(1f).translationY(0f).setDuration(190)
+                            .withEndAction(() -> tabsAnimating[0] = false).start();
+                }
             }
             boolean compact = sy > Math.round(72 * dp);
             brand.animate().alpha(compact ? 0.78f : 1f)
