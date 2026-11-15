@@ -212,7 +212,7 @@ public final class MainActivity extends Activity {
             ribbonPaint.setStrokeWidth(ribbonWidth);
             ribbonPaint.setShader(new android.graphics.LinearGradient(0f, centerY - h * 0.24f,
                     w, centerY + h * 0.24f,
-                    new int[]{0x00D4AF37, 0x1FD4AF37, 0x2038BDF8, 0x0038BDF8},
+                    new int[]{0x0038BDF8, 0x1A8ABEFF, 0x2238BDF8, 0x008ABEFF},
                     new float[]{0f, 0.30f, 0.72f, 1f}, android.graphics.Shader.TileMode.CLAMP));
             ribbonPaint.setShadowLayer(Math.max(18f, ribbonWidth * 0.72f), 0f, 0f, 0x4438BDF8);
             canvas.drawPath(ribbon, ribbonPaint);
@@ -228,9 +228,8 @@ public final class MainActivity extends Activity {
                 float y = h * (1f - travel);
                 float x = xBase + wave(0.20f + (i % 5) * 0.035f, seed) * w * 0.009f;
                 float twinkle = 0.5f + 0.5f * wave(1.1f + (i % 4) * 0.17f, seed * 0.8f);
-                boolean gold = i % 4 == 0 || i % 7 == 0;
-                int color = gold ? 0xFFFFD98A : 0xFFEAF5FF;
-                int alpha = 22 + Math.round(twinkle * (gold ? 62f : 48f));
+                int color = (i % 5 == 0) ? 0xFFB8D9FF : 0xFFEAF5FF;
+                int alpha = 18 + Math.round(twinkle * (i % 5 == 0 ? 42f : 36f));
                 particle.setColor(withAlpha(color, alpha));
                 float radius = Math.max(1f, Math.min(w, h) * (i % 9 == 0 ? 0.0021f : 0.00105f));
                 particle.setShadowLayer(radius * 3.5f, 0f, 0f,
@@ -261,7 +260,7 @@ public final class MainActivity extends Activity {
         top.setGravity(Gravity.CENTER_VERTICAL);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setPadding(dp(2), dp(8), dp(2), dp(8));
-        TextView mark = Ui.text(this, "●", 25, R.color.bn_accent, 800);
+        TextView mark = Ui.text(this, "✦", 25, R.color.bn_accent, 800);
         mark.setTextColor(0xFF5BA8FF);
         top.addView(mark);
         LinearLayout brand = new LinearLayout(this);
@@ -280,7 +279,7 @@ public final class MainActivity extends Activity {
         LinearLayout hero = new LinearLayout(this);
         hero.setOrientation(LinearLayout.VERTICAL);
         hero.setPadding(dp(22), dp(24), dp(22), dp(22));
-        hero.setBackground(Ui.round(0xFF17283D, dp(24), 0xFF41658E, dp(1)));
+        hero.setBackground(Ui.round(0xFF111B2A, dp(24), 0x334F6B8A, dp(1)));
         TextView eyebrow = Ui.text(this, "YOUR PLAY SPACE", 11, R.color.bn_text_2, 800);
         eyebrow.setTextColor(0xFF8CC5FF);
         hero.addView(eyebrow);
@@ -290,7 +289,7 @@ public final class MainActivity extends Activity {
         hp.topMargin = dp(7);
         hero.addView(headline, hp);
         TextView sub = Ui.body(this, "Your games, your settings, your next adventure.");
-        sub.setTextColor(0xFFD0DCCF);
+        sub.setTextColor(0xFF9AA8BA);
         LinearLayout.LayoutParams subp = Ui.wrap();
         subp.topMargin = dp(5);
         hero.addView(sub, subp);
