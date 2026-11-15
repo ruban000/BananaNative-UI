@@ -133,6 +133,18 @@ final class SidePanel extends FrameLayout {
         liveBg.setCornerRadius(999 * dp);
         live.setBackground(liveBg);
         brand.addView(live, new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+        TextView closePanel = new TextView(a);
+        closePanel.setText("×");
+        closePanel.setTextColor(0xFFEAF1FA);
+        closePanel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        closePanel.setGravity(Gravity.CENTER);
+        closePanel.setFocusable(true);
+        closePanel.setContentDescription("Close in-game menu");
+        closePanel.setBackground(makeRailActionBackground(dp));
+        LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(Math.round(38 * dp), Math.round(38 * dp));
+        closeLp.leftMargin = Math.round(9 * dp);
+        brand.addView(closePanel, closeLp);
+        closePanel.setOnClickListener(v -> close());
         // Exit is a floating action at the lower-right, away from the tab navigation.
         brand.setBackgroundColor(0xD90F1B2B);
         content.addView(brand, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(66 * dp)));
@@ -145,7 +157,7 @@ final class SidePanel extends FrameLayout {
                 new int[] {0xE91A1835, 0xE90D1727, 0xE90B1422});
         tabs.setBackground(railBg);
         tabs.setPadding(Math.round(5 * dp), Math.round(10 * dp), Math.round(5 * dp), Math.round(10 * dp));
-        body.addView(tabs, new LinearLayout.LayoutParams(Math.round(76 * dp), LayoutParams.MATCH_PARENT));
+        body.addView(tabs, new LinearLayout.LayoutParams(Math.round(100 * dp), LayoutParams.MATCH_PARENT));
         scroll.setClipToPadding(false);
         scroll.setFillViewport(false);
         scroll.setBackgroundColor(0x00000000);
@@ -341,48 +353,44 @@ final class SidePanel extends FrameLayout {
     private void tabBar() {
         tabs.removeAllViews();
         float dp = getResources().getDisplayMetrics().density;
-        int itemHeight = Math.round(66 * dp);
-        int pad = Math.round(3 * dp);
-        String[] glyphs = {"◷", "▣", "⌖", "☷"};
+        int itemHeight = Math.round(72 * dp);
+        String[] glyphs = {"◷", "▣", "⌖", "☰"};
         for (int i = 0; i < TAB_NAMES.length; i++) {
             int k = i;
             boolean on = i == tab;
-            TextView item = new TextView(act);
-            item.setText(glyphs[i] + "\\n" + TAB_NAMES[i]);
+            LinearLayout item = new LinearLayout(act);
+            item.setOrientation(LinearLayout.VERTICAL);
             item.setGravity(Gravity.CENTER);
-            item.setMaxLines(2);
-            item.setIncludeFontPadding(false);
-            item.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
-            item.setLineSpacing(0, 0.92f);
-            item.setPadding(pad, Math.round(7 * dp), pad, Math.round(7 * dp));
-            item.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-            item.setTextColor(on ? 0xFFFFFFFF : 0xFF9EADBF);
+            item.setPadding(Math.round(3 * dp), Math.round(7 * dp), Math.round(3 * dp), Math.round(7 * dp));
+            TextView icon = new TextView(act);
+            icon.setText(glyphs[i]);
+            icon.setGravity(Gravity.CENTER);
+            icon.setIncludeFontPadding(false);
+            icon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+            icon.setTextColor(on ? 0xFFF4F6FF : 0xFF9EADBF);
+            item.addView(icon, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(25 * dp)));
+            TextView label = new TextView(act);
+            label.setText(TAB_NAMES[i]);
+            label.setGravity(Gravity.CENTER);
+            label.setIncludeFontPadding(false);
+            label.setMaxLines(2);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            label.setTextColor(on ? 0xFFFFFFFF : 0xFF9EADBF);
+            label.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            item.addView(label, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
             GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     on ? new int[] {0x654C3D91, 0x55305D9B} : new int[] {0x00000000, 0x00000000});
             bg.setCornerRadius(13 * dp);
             bg.setStroke(Math.max(1, Math.round(dp)), on ? 0x887E9DFF : 0x00000000);
             item.setBackground(bg);
-            item.setSelected(on);
             item.setFocusable(true);
+            item.setClickable(true);
             item.setOnClickListener(v -> { animateTap(v); showTab(k); });
             item.setContentDescription(TAB_NAMES[i] + " tab, " + (i + 1) + " of " + TAB_NAMES.length + (on ? ", selected" : ""));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, itemHeight);
-            lp.bottomMargin = Math.round(5 * dp);
+            lp.bottomMargin = Math.round(6 * dp);
             tabs.addView(item, lp);
         }
-
-        View spacer = new View(act);
-        tabs.addView(spacer, new LinearLayout.LayoutParams(1, 0, 1f));
-        TextView x = new TextView(act);
-        x.setText("×");
-        x.setGravity(Gravity.CENTER);
-        x.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
-        x.setTextColor(0xFFE8EAED);
-        x.setFocusable(true);
-        x.setBackground(makeRailActionBackground(dp));
-        x.setOnClickListener(v -> close());
-        x.setContentDescription("Close the panel, back to the game");
-        tabs.addView(x, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, Math.round(50 * dp)));
     }
 
     private GradientDrawable makeRailActionBackground(float dp) {
