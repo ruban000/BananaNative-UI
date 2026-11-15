@@ -138,10 +138,13 @@ final class SidePanel extends FrameLayout {
         tabs.setOrientation(LinearLayout.HORIZONTAL);
         tabs.setBackgroundColor(0xB30A111D);
         content.addView(tabs, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.round(58 * dp)));
+        scroll.setClipToPadding(false);
+        scroll.setFillViewport(false);
+        scroll.setPadding(0, 0, 0, Math.round(92 * dp)); // reserve room for the floating exit action
         content.addView(scroll, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         sh.addView(content, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         TextView exit = new TextView(a);
-        exit.setText("⏻");
+        exit.setText("↗");
         exit.setTextColor(0xFFF4F7FC);
         exit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 23);
         exit.setGravity(Gravity.CENTER);
@@ -154,7 +157,7 @@ final class SidePanel extends FrameLayout {
         exit.setBackground(exitBg);
         exit.setElevation(12 * dp);
         exit.setOnClickListener(v -> { animateTap(v); confirmStop(); });
-        Ui.settingFocus(act, exit, 24);
+
         FrameLayout.LayoutParams exitLp = new FrameLayout.LayoutParams(Math.round(58 * dp), Math.round(58 * dp), Gravity.BOTTOM | Gravity.RIGHT);
         exitLp.setMargins(0, 0, Math.round(22 * dp), Math.round(22 * dp));
         sh.addView(exit, exitLp);
@@ -349,18 +352,18 @@ final class SidePanel extends FrameLayout {
             t.setPadding(pad, Math.round(5 * dp), pad, Math.round(5 * dp));
             t.setSelected(on);
             t.setFocusable(true);
-            Ui.settingFocus(act, t, 12);
+
             t.setOnClickListener(v -> { animateTap(v); showTab(k); });
             t.setContentDescription(TAB_NAMES[i] + " tab, " + (i + 1) + " of " + TAB_NAMES.length + (on ? ", selected" : ""));
             tabs.addView(t, new LinearLayout.LayoutParams(0, h, 1f));
         }
         TextView x = new TextView(act);
-        x.setText("✕");
+        x.setText("×");
         x.setGravity(Gravity.CENTER);
         x.setTextSize(18);
         x.setTextColor(0xFFE8EAED);
         x.setFocusable(true);
-        Ui.settingFocus(act, x, 12);
+
         x.setOnClickListener(v -> close());
         x.setContentDescription("Close the panel, back to the game");
         tabs.addView(x, new LinearLayout.LayoutParams(h, h));
@@ -406,7 +409,7 @@ final class SidePanel extends FrameLayout {
         attachPanelFocus(box);
     }
     private void attachPanelFocus(View v) {
-        if (v.isFocusable() && v != this) Ui.settingFocus(act, v, 12);
+        if (v.isFocusable() && v != this && v.getParent() != tabs) Ui.settingFocus(act, v, 12);
         if (v instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) v).getChildCount(); i++) attachPanelFocus(((ViewGroup) v).getChildAt(i));
     }
 
