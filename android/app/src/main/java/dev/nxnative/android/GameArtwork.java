@@ -25,89 +25,47 @@ final class GameArtwork {
             return;
         }
         new Thread(() -> {
-            File logo = findLogo(dump);
-            Bitmap icon = decode(findImage(logo, new String[]{"icon", "icon0", "game_icon", "cover", "title"}, true), 512);
-            Bitmap background = decode(findImage(logo, new String[]{"background", "bg", "banner"}, false), 1920);
+            File iconFile = findArtworkFile(dump, false);
+            File backgroundFile = findArtworkFile(dump, true);
+            Bitmap icon = decode(iconFile, 512);
+            Bitmap background = decode(backgroundFile, 1920);
             Artwork artwork = new Artwork(icon, background);
             MAIN.post(() -> done.accept(artwork));
         }, "nx-game-artwork").start();
     }
 
-    private static File findLogo(File dump) {
-        File updates = new File(dump, "updates");
-        File fixed = new File(updates, "655360/romfs/Logo");
-        if (fixed.isDirectory()) return fixed;
-        File direct = new File(dump, "romfs/Logo");
-        if (direct.isDirectory()) return direct;
-        File logo = new File(dump, "Logo");
-        if (logo.isDirectory()) return logo;
-        File[] updateDirs = updates.listFiles();
-        if (updateDirs != null) for (File update : updateDirs) {
-            File candidate = new File(update, "romfs/Logo");
-            if (candidate.isDirectory()) return candidate;
+    private static File findArtworkFile(File root, boolean background) {
+        java.util.ArrayList<File> matches = new java.util.ArrayList<>();
+        collectImages(root, matches, 0, 24);
+        File best = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (File file : matches) {
+            String name = file.getName().toLowerCase(Locale.ROOT);
+            String path = file.getAbsolutePath().toLowerCase(Locale.ROOT);
+            boolean isBackground = name.contains("background") || name.contains("wallpaper") || name.contains("banner") || name.startsWith("bg_") || name.startsWith("bg-") || name.equals("bg.png") || name.equals("bg.jpg") || name.equals("bg.jpeg") || path.contains("/background/");
+            boolean isLogo = name.contains("logo") || name.contains("icon") || name.contains("cover") || name.contains("jacket") || name.contains("thumbnail");
+            int score = 0;
+            if (background) { if (isBackground) score += 100; if (isLogo) score -= 100; }
+            else { if (isLogo) score += 100; if (isBackground) score -= 100; }
+            if (path.contains("/romfs/logo/")) score += 20;
+            if (score > bestScore) { bestScore = score; best = file; }
         }
-        // Some dumps add extra wrapper folders. Search the selected folder's
-        // subdirectories for a Logo directory after checking the known layouts.
-        return findNamedDirectory(dump, "Logo", 0, 8);
+        if (bestScore <= 0 && !background) return matches.isEmpty() ? null : matches.get(0);
+        return bestScore > 0 ? best : null;
     }
 
-    private static File findNamedDirectory(File dir, String name, int depth, int maxDepth) {
-        if (dir == null || !dir.isDirectory() || depth > maxDepth) return null;
+    private static void collectImages(File dir, java.util.List<File> out, int depth, int maxDepth) {
+        if (dir == null || !dir.isDirectory() || depth > maxDepth) return;
         File[] children = dir.listFiles();
-        if (children == null) return null;
+        if (children == null) return;
         java.util.Arrays.sort(children, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
-        for (File child : children) {
-            if (child.isDirectory() && child.getName().equalsIgnoreCase(name)) return child;
-        }
+        for (File child : children) if (child.isFile() && isImage(child)) out.add(child);
         for (File child : children) {
             if (!child.isDirectory()) continue;
             String n = child.getName().toLowerCase(Locale.ROOT);
-            if (n.equals("android") || n.equals("data") || n.equals("cache") || n.equals(".git")) continue;
-            File found = findNamedDirectory(child, name, depth + 1, maxDepth);
-            if (found != null) return found;
+            if (n.equals("android") || n.equals("data") || n.equals("cache") || n.equals(".git") || n.equals("shader") || n.equals("shaders")) continue;
+            collectImages(child, out, depth + 1, maxDepth);
         }
-        return null;
-    }
-
-    private static File findImage(File logo, String[] preferred, boolean allowFallback) {
-        if (logo == null || !logo.isDirectory()) return null;
-        for (String name : preferred) {
-            File exact = new File(logo, name);
-            if (isImage(exact)) return exact;
-            for (String ext : new String[]{".png", ".jpg", ".jpeg", ".webp"}) {
-                File withExt = new File(logo, name + ext);
-                if (isImage(withExt)) return withExt;
-            }
-        }
-        File backgroundDir = new File(logo, "background");
-        File found = firstImage(backgroundDir);
-        if (found != null && !allowFallback) return found;
-        return allowFallback ? firstImageExceptBackground(logo) : null;
-    }
-
-    private static File firstImageExceptBackground(File logo) {
-        File[] files = logo.listFiles();
-        if (files == null) return null;
-        java.util.Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
-        for (File f : files) if (!f.isDirectory() && isImage(f) && !f.getName().toLowerCase(Locale.ROOT).contains("background")) return f;
-        for (File f : files) if (f.isDirectory() && !f.getName().equalsIgnoreCase("background")) {
-            File nested = firstImage(f);
-            if (nested != null) return nested;
-        }
-        return null;
-    }
-
-    private static File firstImage(File dir) {
-        if (dir == null || !dir.isDirectory()) return isImage(dir) ? dir : null;
-        File[] files = dir.listFiles();
-        if (files == null) return null;
-        java.util.Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
-        for (File f : files) if (isImage(f)) return f;
-        for (File f : files) if (f.isDirectory()) {
-            File nested = firstImage(f);
-            if (nested != null) return nested;
-        }
-        return null;
     }
 
     private static boolean isImage(File f) {
