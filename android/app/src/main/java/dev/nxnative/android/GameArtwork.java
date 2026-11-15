@@ -46,8 +46,10 @@ final class GameArtwork {
         try { if (dump != null) id = Pack.titleIdOf(dump); } catch (Exception ignored) { }
         File iconOverride = id == null ? null : overrideFile(c, id, false);
         File backgroundOverride = id == null ? null : overrideFile(c, id, true);
-        if (iconOverride == null && backgroundOverride == null) { load(dump, done); return; }
-        final File iconFile = iconOverride, backgroundFile = backgroundOverride;
+        final File autoIcon = iconOverride == null && dump != null && dump.isDirectory() ? findArtworkFile(dump, false) : null;
+        final File autoBackground = backgroundOverride == null && dump != null && dump.isDirectory() ? findArtworkFile(dump, true) : null;
+        final File iconFile = iconOverride != null ? iconOverride : autoIcon;
+        final File backgroundFile = backgroundOverride != null ? backgroundOverride : autoBackground;
         new Thread(() -> {
             Bitmap icon = decode(iconFile, 512);
             Bitmap background = decode(backgroundFile, 1920);
