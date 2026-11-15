@@ -46,6 +46,26 @@ final class GameArtwork {
             File candidate = new File(update, "romfs/Logo");
             if (candidate.isDirectory()) return candidate;
         }
+        // Some dumps add extra wrapper folders. Search the selected folder's
+        // subdirectories for a Logo directory after checking the known layouts.
+        return findNamedDirectory(dump, "Logo", 0, 8);
+    }
+
+    private static File findNamedDirectory(File dir, String name, int depth, int maxDepth) {
+        if (dir == null || !dir.isDirectory() || depth > maxDepth) return null;
+        File[] children = dir.listFiles();
+        if (children == null) return null;
+        java.util.Arrays.sort(children, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        for (File child : children) {
+            if (child.isDirectory() && child.getName().equalsIgnoreCase(name)) return child;
+        }
+        for (File child : children) {
+            if (!child.isDirectory()) continue;
+            String n = child.getName().toLowerCase(Locale.ROOT);
+            if (n.equals("android") || n.equals("data") || n.equals("cache") || n.equals(".git")) continue;
+            File found = findNamedDirectory(child, name, depth + 1, maxDepth);
+            if (found != null) return found;
+        }
         return null;
     }
 
