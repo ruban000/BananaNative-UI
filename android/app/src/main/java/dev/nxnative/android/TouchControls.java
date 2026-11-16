@@ -51,7 +51,7 @@ final class TouchControls extends View {
     private float opacity, scale;
     private boolean haptics;
     private boolean dualStick;   // one setting: invisible floating-origin left and right sticks
-    private int rightSwipeSensitivity;   // right-side swipe to right-stick response (8..120)
+    private int rightSwipeSensitivity;   // right-side swipe to right-stick response (8..240)
 
     // The layout in pixels, as the host has it
     private int n;
@@ -108,7 +108,7 @@ final class TouchControls extends View {
         haptics = prefs().getBoolean("haptics", true);
         dualStick = prefs().getBoolean("dual_stick", false);
         rightSwipeSensitivity = prefs().getInt("right_swipe_sensitivity", 24);
-        rightSwipeSensitivity = Math.max(8, Math.min(120, rightSwipeSensitivity));
+        rightSwipeSensitivity = Math.max(8, Math.min(240, rightSwipeSensitivity));
         shown = prefs().getBoolean("shown", true);
         line.setStyle(Paint.Style.STROKE);
         text.setTextAlign(Paint.Align.CENTER);
@@ -168,7 +168,7 @@ final class TouchControls extends View {
     }
 
     private void setRightSwipeSensitivity(int value) {
-        rightSwipeSensitivity = Math.max(8, Math.min(120, value));
+        rightSwipeSensitivity = Math.max(8, Math.min(240, value));
         prefs().edit().putInt("right_swipe_sensitivity", rightSwipeSensitivity).commit();
         if (input) Native.touchControlsRightSwipeSensitivity(rightSwipeSensitivity);
     }
@@ -670,7 +670,7 @@ final class TouchControls extends View {
         CheckBox hb = new CheckBox(ctx), lb = new CheckBox(ctx), tb = new CheckBox(ctx), db = new CheckBox(ctx);
         TextView sensitivityLabel = new TextView(ctx);
         SeekBar sensitivityBar = new SeekBar(ctx);
-        sensitivityBar.setMax(112);
+        sensitivityBar.setMax(232);
         sensitivityBar.setProgress(rightSwipeSensitivity - 8);
         sensitivityBar.setKeyProgressIncrement(2);
         os.setMax(90); os.setProgress(Math.round(opacity * 100) - 10);   // 10..100 %
