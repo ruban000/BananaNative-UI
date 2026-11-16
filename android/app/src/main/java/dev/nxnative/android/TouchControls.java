@@ -108,7 +108,7 @@ final class TouchControls extends View {
         scale = prefs().getFloat("scale", 1f);
         haptics = prefs().getBoolean("haptics", true);
         dualStick = prefs().getBoolean("dual_stick", false);
-        int savedSensitivity = prefs().getInt("right_swipe_sensitivity", 1);
+        int savedSensitivity = prefs().getInt("right_swipe_sensitivity", 3);
         // Migrate the previous native 8..240 preference to the new 1..10 scale.
         rightSwipeSensitivity = savedSensitivity > 10
                 ? Math.max(1, Math.min(10, Math.round(1 + (savedSensitivity - 130) * 9.0f / 110.0f)))
