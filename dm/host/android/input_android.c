@@ -154,7 +154,7 @@ void nxhost_touch_dual_stick(bool on) {
 void nxhost_touch_right_sensitivity(float sensitivity) {
     pthread_mutex_lock(&g_mu); touch_once();
     if (sensitivity < 8.0f) sensitivity = 8.0f;
-    if (sensitivity > 120.0f) sensitivity = 120.0f;
+    if (sensitivity > 240.0f) sensitivity = 240.0f;
     g_touch.right_sensitivity = sensitivity;
     pthread_mutex_unlock(&g_mu);
 }
