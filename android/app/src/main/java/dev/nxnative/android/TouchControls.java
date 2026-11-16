@@ -106,14 +106,14 @@ final class TouchControls extends View {
     TouchControls(Context c, boolean input) {
         super(c);
         this.input = input;
-        buttonIcons[0] = BitmapFactory.decodeResource(getResources(), R.drawable.button_a);
-        buttonIcons[1] = BitmapFactory.decodeResource(getResources(), R.drawable.button_b);
-        buttonIcons[2] = BitmapFactory.decodeResource(getResources(), R.drawable.button_x);
-        buttonIcons[3] = BitmapFactory.decodeResource(getResources(), R.drawable.button_y);
-        buttonIcons[4] = BitmapFactory.decodeResource(getResources(), R.drawable.button_zr);
-        buttonIcons[5] = BitmapFactory.decodeResource(getResources(), R.drawable.button_zl);
-        buttonIcons[6] = BitmapFactory.decodeResource(getResources(), R.drawable.button_r);
-        buttonIcons[7] = BitmapFactory.decodeResource(getResources(), R.drawable.button_l);
+        buttonIcons[0] = BitmapFactory.decodeResource(getResources(), dev.nxnative.android.R.drawable.button_a);
+        buttonIcons[1] = BitmapFactory.decodeResource(getResources(), dev.nxnative.android.R.drawable.button_b);
+        buttonIcons[2] = BitmapFactory.decodeResource(getResources(), dev.nxnative.android.R.drawable.button_x);
+        buttonIcons[3] = BitmapFactory.decodeResource(getResources(), dev.nxnative.android.R.drawable.button_y);
+        buttonIcons[4] = BitmapFactory.decodeResource(getResources(), dev.nxnative.android.R.drawable.button_zr);
+        buttonIcons[5] = BitmapFactory.decodeResource(getResources(), dev.nxnative.android.R.drawable.button_zl);
+        buttonIcons[6] = BitmapFactory.decodeResource(getResources(), dev.nxnative.android.R.drawable.button_r);
+        buttonIcons[7] = BitmapFactory.decodeResource(getResources(), dev.nxnative.android.R.drawable.button_l);
         opacity = prefs().getFloat("opacity", 0.6f);
         scale = prefs().getFloat("scale", 1f);
         haptics = prefs().getBoolean("haptics", true);
