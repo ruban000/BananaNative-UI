@@ -150,7 +150,7 @@ int nxin_touch_set_layout(nxin_touch *t, const nxhost_touch_control *c, int n, i
 }
 void nxin_touch_init(nxin_touch *t) {
     memset(t, 0, sizeof *t);
-    t->enabled = 1; t->sw = 16; t->sh = 9; t->gw = t->gh = 1;
+    t->enabled = 1; t->sw = 16; t->sh = 9; t->gw = t->gh = 1; t->right_sensitivity = 24.0f;
     nxin_touch_default_layout(t);
 }
 // Distance from a control's centre in units of the screen height
@@ -186,9 +186,8 @@ static void drive(nxin_touch *t, nxin_pointer *p) {   // a pointer on a control 
             // nudges the Switch right stick, rather than measuring from a fixed
             // joystick origin. Keep the previous point so the user can lift and
             // re-touch anywhere without needing to drag from a fixed centre.
-            const float sensitivity = 24.0f;
-            t->sx[1] = clamp1(dx * sensitivity);
-            t->sy[1] = clamp1(-dy * sensitivity);
+            t->sx[1] = clamp1(dx * t->right_sensitivity);
+            t->sy[1] = clamp1(-dy * t->right_sensitivity);
             p->origin_x = p->x;
             p->origin_y = p->y;
         } else {
