@@ -51,6 +51,7 @@ final class TouchControls extends View {
     private float opacity, scale;
     private boolean haptics;
     private boolean dualStick;   // one setting: invisible floating-origin left and right sticks
+    private int rightSwipeSensitivity;   // right-side swipe to right-stick response (8..48)
 
     // The layout in pixels, as the host has it
     private int n;
@@ -106,6 +107,8 @@ final class TouchControls extends View {
         scale = prefs().getFloat("scale", 1f);
         haptics = prefs().getBoolean("haptics", true);
         dualStick = prefs().getBoolean("dual_stick", false);
+        rightSwipeSensitivity = prefs().getInt("right_swipe_sensitivity", 24);
+        rightSwipeSensitivity = Math.max(8, Math.min(48, rightSwipeSensitivity));
         shown = prefs().getBoolean("shown", true);
         line.setStyle(Paint.Style.STROKE);
         text.setTextAlign(Paint.Align.CENTER);
@@ -157,10 +160,17 @@ final class TouchControls extends View {
     private void apply() {
         if (input) {
             Native.touchControlsDualStick(dualStick);
+            Native.touchControlsRightSwipeSensitivity(rightSwipeSensitivity);
             Native.touchControlsEnable(active() && !editing);
         }   // off: every touch in the picture is the game's touchscreen
         Arrays.fill(pressed, 0); Arrays.fill(prev, 0); Arrays.fill(sticks, 0);
         invalidate();
+    }
+
+    private void setRightSwipeSensitivity(int value) {
+        rightSwipeSensitivity = Math.max(8, Math.min(48, value));
+        prefs().edit().putInt("right_swipe_sensitivity", rightSwipeSensitivity).commit();
+        if (input) Native.touchControlsRightSwipeSensitivity(rightSwipeSensitivity);
     }
 
     private void setDualStick(boolean on) {
@@ -658,6 +668,11 @@ final class TouchControls extends View {
         TextView ol = new TextView(ctx), sl = new TextView(ctx);
         SeekBar os = new SeekBar(ctx), ss = new SeekBar(ctx);
         CheckBox hb = new CheckBox(ctx), lb = new CheckBox(ctx), tb = new CheckBox(ctx), db = new CheckBox(ctx);
+        TextView sensitivityLabel = new TextView(ctx);
+        SeekBar sensitivityBar = new SeekBar(ctx);
+        sensitivityBar.setMax(40);
+        sensitivityBar.setProgress(rightSwipeSensitivity - 8);
+        sensitivityBar.setKeyProgressIncrement(2);
         os.setMax(90); os.setProgress(Math.round(opacity * 100) - 10);   // 10..100 %
         ss.setMax(90); ss.setProgress(Math.round(scale * 100) - 60);     // 60..150 %
         os.setKeyProgressIncrement(5); ss.setKeyProgressIncrement(5);   // the D-pad's left / right: 5 % a press
@@ -668,6 +683,16 @@ final class TouchControls extends View {
         db.setText("Invisible dual joysticks (left / right screen halves)");
         db.setChecked(dualStick);
         db.setOnCheckedChangeListener((b, v) -> setDualStick(v));
+        Runnable sensitivityText = () -> sensitivityLabel.setText("Right swipe sensitivity  " + (sensitivityBar.getProgress() + 8));
+        sensitivityText.run();
+        sensitivityBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int value, boolean user) {
+                sensitivityText.run();
+                if (user) setRightSwipeSensitivity(value + 8);
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) {}
+            @Override public void onStopTrackingTouch(SeekBar bar) {}
+        });
         Runnable labels = () -> { ol.setText("Opacity " + (os.getProgress() + 10) + " %"); sl.setText("Size " + (ss.getProgress() + 60) + " %"); };
         labels.run();
         SeekBar.OnSeekBarChangeListener live = new SeekBar.OnSeekBarChangeListener() {
@@ -691,6 +716,7 @@ final class TouchControls extends View {
         stylePanelAction(reset, ctx, false);
         reset.setOnClickListener(v -> { os.setProgress(50); ss.setProgress(40); hb.setChecked(true); });   // 60 % opacity, 100 % size, the tick on
         box.addView(ol); box.addView(os); box.addView(sl); box.addView(ss); box.addView(hb); box.addView(lb); box.addView(tb); box.addView(db);
+        box.addView(sensitivityLabel); box.addView(sensitivityBar);
         addPanelAction(box, reset, ctx);
         Button ed = new Button(ctx);   // the layout editor (runs onEditStart); the picture's position is in the panel's Picture rows (positionRows)
         ed.setText("✥   Customize controls layout…");
