@@ -142,6 +142,15 @@ void nxhost_touch_controls_enable(bool on) {
     if (g_touch.enabled != on) { touch_release_all(); g_touch.enabled = on; }
     pthread_mutex_unlock(&g_mu);
 }
+void nxhost_touch_dual_stick(bool on) {
+    pthread_mutex_lock(&g_mu); touch_once();
+    if (g_touch.dual_stick != (on ? 1 : 0)) {
+        touch_release_all();
+        g_touch.dual_stick = on ? 1 : 0;
+        publish_touch_pad();
+    }
+    pthread_mutex_unlock(&g_mu);
+}
 int nxhost_touch_controls_set(const nxhost_touch_control *c, int n) {
     pthread_mutex_lock(&g_mu); touch_once();
     int kept = 0, r = nxin_touch_set_layout(&g_touch, c, n, &kept);
