@@ -213,7 +213,7 @@ static int in_game(const nxin_touch *t, float x, float y) { return x >= t->gx &&
 int nxin_touch_event(nxin_touch *t, int action, int id, float x, float y) {
     int k = -1; for (int i = 0; i < t->np; i++) if (t->p[i].id == id) k = i;
     if (action == AM_CANCEL) {   // the whole gesture is gone
-        int r = 0; for (int i = 0; i < t->np; i++) r |= t->p[i].ctl >= 0 ? 1 : t->p[i].ctl == -1 ? 2 : 0, release(t, t->p[i].ctl);
+        int r = 0; for (int i = 0; i < t->np; i++) r |= (t->p[i].ctl >= 0 || t->p[i].ctl == -3 || t->p[i].ctl == -4) ? 1 : t->p[i].ctl == -1 ? 2 : 0, release(t, t->p[i].ctl);
         t->np = 0; return r;
     }
     if (action == AM_DOWN || action == AM_POINTER_DOWN) {
