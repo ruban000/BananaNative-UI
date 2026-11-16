@@ -51,7 +51,8 @@ final class TouchControls extends View {
     private float opacity, scale;
     private boolean haptics;
     private boolean dualStick;   // one setting: invisible floating-origin left and right sticks
-    private int rightSwipeSensitivity;   // right-side swipe to right-stick response (8..240)
+    private int rightSwipeSensitivity;   // user-facing right-side swipe sensitivity (1..10)
+    private static float nativeRightSwipeSensitivity(int level) { return 130.0f + (Math.max(1, Math.min(10, level)) - 1) * (110.0f / 9.0f); }
 
     // The layout in pixels, as the host has it
     private int n;
@@ -107,8 +108,12 @@ final class TouchControls extends View {
         scale = prefs().getFloat("scale", 1f);
         haptics = prefs().getBoolean("haptics", true);
         dualStick = prefs().getBoolean("dual_stick", false);
-        rightSwipeSensitivity = prefs().getInt("right_swipe_sensitivity", 24);
-        rightSwipeSensitivity = Math.max(8, Math.min(240, rightSwipeSensitivity));
+        int savedSensitivity = prefs().getInt("right_swipe_sensitivity", 1);
+        // Migrate the previous native 8..240 preference to the new 1..10 scale.
+        rightSwipeSensitivity = savedSensitivity > 10
+                ? Math.max(1, Math.min(10, Math.round(1 + (savedSensitivity - 130) * 9.0f / 110.0f)))
+                : Math.max(1, savedSensitivity);
+        prefs().edit().putInt("right_swipe_sensitivity", rightSwipeSensitivity).apply();
         shown = prefs().getBoolean("shown", true);
         line.setStyle(Paint.Style.STROKE);
         text.setTextAlign(Paint.Align.CENTER);
@@ -160,7 +165,7 @@ final class TouchControls extends View {
     private void apply() {
         if (input) {
             Native.touchControlsDualStick(dualStick);
-            Native.touchControlsRightSwipeSensitivity(rightSwipeSensitivity);
+            Native.touchControlsRightSwipeSensitivity(nativeRightSwipeSensitivity(rightSwipeSensitivity));
             Native.touchControlsEnable(active() && !editing);
         }   // off: every touch in the picture is the game's touchscreen
         Arrays.fill(pressed, 0); Arrays.fill(prev, 0); Arrays.fill(sticks, 0);
@@ -168,9 +173,9 @@ final class TouchControls extends View {
     }
 
     private void setRightSwipeSensitivity(int value) {
-        rightSwipeSensitivity = Math.max(8, Math.min(240, value));
+        rightSwipeSensitivity = Math.max(1, Math.min(10, value));
         prefs().edit().putInt("right_swipe_sensitivity", rightSwipeSensitivity).commit();
-        if (input) Native.touchControlsRightSwipeSensitivity(rightSwipeSensitivity);
+        if (input) Native.touchControlsRightSwipeSensitivity(nativeRightSwipeSensitivity(rightSwipeSensitivity));
     }
 
     private void setDualStick(boolean on) {
@@ -670,8 +675,8 @@ final class TouchControls extends View {
         CheckBox hb = new CheckBox(ctx), lb = new CheckBox(ctx), tb = new CheckBox(ctx), db = new CheckBox(ctx);
         TextView sensitivityLabel = new TextView(ctx);
         SeekBar sensitivityBar = new SeekBar(ctx);
-        sensitivityBar.setMax(232);
-        sensitivityBar.setProgress(rightSwipeSensitivity - 8);
+        sensitivityBar.setMax(9);
+        sensitivityBar.setProgress(rightSwipeSensitivity - 1);
         sensitivityBar.setKeyProgressIncrement(2);
         os.setMax(90); os.setProgress(Math.round(opacity * 100) - 10);   // 10..100 %
         ss.setMax(90); ss.setProgress(Math.round(scale * 100) - 60);     // 60..150 %
@@ -683,12 +688,12 @@ final class TouchControls extends View {
         db.setText("Invisible dual joysticks (left / right screen halves)");
         db.setChecked(dualStick);
         db.setOnCheckedChangeListener((b, v) -> setDualStick(v));
-        Runnable sensitivityText = () -> sensitivityLabel.setText("Right swipe sensitivity  " + (sensitivityBar.getProgress() + 8));
+        Runnable sensitivityText = () -> sensitivityLabel.setText("Right swipe sensitivity  " + (sensitivityBar.getProgress() + 1));
         sensitivityText.run();
         sensitivityBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar bar, int value, boolean user) {
                 sensitivityText.run();
-                if (user) setRightSwipeSensitivity(value + 8);
+                if (user) setRightSwipeSensitivity(value + 1);
             }
             @Override public void onStartTrackingTouch(SeekBar bar) {}
             @Override public void onStopTrackingTouch(SeekBar bar) {}
