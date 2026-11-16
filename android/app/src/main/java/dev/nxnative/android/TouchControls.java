@@ -452,12 +452,20 @@ final class TouchControls extends View {
                     if (haptics) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                     return true;
                 }
-                send(act, id, e.getX(i), e.getY(i));
-                break;
+                // Once this overlay owns the toggle gesture, forward any additional fingers
+                // to the native touch layer. Ordinary gameplay touches fall through to the
+                // dedicated GameSurfaceView below.
+                if (toggleId >= 0) {
+                    send(act, id, e.getX(i), e.getY(i));
+                    return true;
+                }
+                return false;
             }
             case MotionEvent.ACTION_MOVE:
-                for (int i = 0; i < e.getPointerCount(); i++) if (e.getPointerId(i) != toggleId) send(act, e.getPointerId(i), e.getX(i), e.getY(i));
-                break;
+                if (toggleId < 0) return false;
+                for (int i = 0; i < e.getPointerCount(); i++)
+                    if (e.getPointerId(i) != toggleId) send(act, e.getPointerId(i), e.getX(i), e.getY(i));
+                return true;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP: {
                 int i = e.getActionIndex(), id = e.getPointerId(i);
@@ -467,19 +475,21 @@ final class TouchControls extends View {
                     if (!toggleLong && onToggle(e.getX(i), e.getY(i))) toggle();
                     return true;
                 }
-                send(act, id, e.getX(i), e.getY(i));
-                break;
+                if (toggleId >= 0) {
+                    send(act, id, e.getX(i), e.getY(i));
+                    return true;
+                }
+                return false;
             }
             case MotionEvent.ACTION_CANCEL:
+                if (toggleId < 0) return false;
                 toggleId = -1;
                 removeCallbacks(longPress);
-                send(act, 0, 0, 0);
-                break;
-            default:
+                send(MotionEvent.ACTION_CANCEL, 0, 0, 0);
                 return true;
+            default:
+                return toggleId >= 0;
         }
-        poll();
-        return true;
     }
 
     /** What the controls hold after a touch: a tick for each new press, a redraw when anything changed */
@@ -496,6 +506,9 @@ final class TouchControls extends View {
         if (tick && haptics) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         if (changed) invalidate();
     }
+
+    /** Called by GameSurfaceView after native gameplay touches update the host's control state. */
+    void inputChanged() { poll(); }
 
     // ---- Drawing ----
     private int alpha(float a) { return Math.max(0, Math.min(255, Math.round(255 * a * opacity))); }
