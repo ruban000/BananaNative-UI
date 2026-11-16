@@ -477,8 +477,9 @@ final class TouchControls extends View {
                     if (act == MotionEvent.ACTION_UP) toggleGesture = false;
                     return true;
                 }
-                if (toggleId >= 0) {
+                if (toggleGesture) {
                     send(act, id, e.getX(i), e.getY(i));
+                    if (act == MotionEvent.ACTION_UP) toggleGesture = false;
                     return true;
                 }
                 return false;
