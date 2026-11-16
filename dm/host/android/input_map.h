@@ -61,6 +61,7 @@ typedef struct {
     nxhost_touch_control c[NXT_MAX]; int n;
     int enabled;                    // 0: the controls are hidden and every touch goes to the game's touchscreen
     int dual_stick;                 // 1: unclaimed left/right screen touches become invisible, floating-origin sticks
+    float right_sensitivity;        // right-side swipe response, default 24
     float sw, sh;                   // screen size in pixels (aspect for hit tests; any unit)
     float gx, gy, gw, gh;           // the game's picture inside the screen, normalized
     nxin_pointer p[16]; int np;
