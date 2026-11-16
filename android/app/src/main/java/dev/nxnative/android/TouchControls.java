@@ -3,6 +3,8 @@ package dev.nxnative.android;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -95,12 +97,23 @@ final class TouchControls extends View {
     private final Runnable longPress = () -> { toggleLong = true; performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); settings(); };
 
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), line = new Paint(Paint.ANTI_ALIAS_FLAG), text = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint iconPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    // The artwork replaces only the eight matching button faces; their existing layout and hit targets stay unchanged.
+    private final Bitmap[] buttonIcons = new Bitmap[8];
     private final Path path = new Path();
     private final RectF rect = new RectF();
 
     TouchControls(Context c, boolean input) {
         super(c);
         this.input = input;
+        buttonIcons[0] = BitmapFactory.decodeResource(getResources(), R.drawable.button_a);
+        buttonIcons[1] = BitmapFactory.decodeResource(getResources(), R.drawable.button_b);
+        buttonIcons[2] = BitmapFactory.decodeResource(getResources(), R.drawable.button_x);
+        buttonIcons[3] = BitmapFactory.decodeResource(getResources(), R.drawable.button_y);
+        buttonIcons[4] = BitmapFactory.decodeResource(getResources(), R.drawable.button_zr);
+        buttonIcons[5] = BitmapFactory.decodeResource(getResources(), R.drawable.button_zl);
+        buttonIcons[6] = BitmapFactory.decodeResource(getResources(), R.drawable.button_r);
+        buttonIcons[7] = BitmapFactory.decodeResource(getResources(), R.drawable.button_l);
         opacity = prefs().getFloat("opacity", 0.6f);
         scale = prefs().getFloat("scale", 1f);
         haptics = prefs().getBoolean("haptics", true);
@@ -529,19 +542,44 @@ final class TouchControls extends View {
             if (kind[i] == STICK) drawStick(c, i);
             else if (kind[i] == DPAD) drawDpad(c, i);
             else {
-                if (shape[i] == SHAPE_SHOULDER) {
-                    rect.set(cx[i] - r[i], cy[i] - r[i] * 0.62f, cx[i] + r[i], cy[i] + r[i] * 0.62f);
-                    c.drawRoundRect(rect, r[i] * 0.5f, r[i] * 0.5f, fill);
-                    c.drawRoundRect(rect, r[i] * 0.5f, r[i] * 0.5f, line);
+                Bitmap icon = buttonIcon(buttons[i]);
+                if (icon != null) {
+                    // Fit the complete transparent PNG inside the original visual footprint.
+                    float boxW = shape[i] == SHAPE_SHOULDER ? 2f * r[i] : 2f * r[i];
+                    float boxH = shape[i] == SHAPE_SHOULDER ? 1.24f * r[i] : 2f * r[i];
+                    float fit = Math.min(boxW / icon.getWidth(), boxH / icon.getHeight());
+                    float drawW = icon.getWidth() * fit, drawH = icon.getHeight() * fit;
+                    rect.set(cx[i] - drawW / 2f, cy[i] - drawH / 2f, cx[i] + drawW / 2f, cy[i] + drawH / 2f);
+                    iconPaint.setAlpha(held ? 190 : 255);
+                    c.drawBitmap(icon, null, rect, iconPaint);
                 } else {
-                    c.drawCircle(cx[i], cy[i], r[i], fill);
-                    c.drawCircle(cx[i], cy[i], r[i], line);
+                    if (shape[i] == SHAPE_SHOULDER) {
+                        rect.set(cx[i] - r[i], cy[i] - r[i] * 0.62f, cx[i] + r[i], cy[i] + r[i] * 0.62f);
+                        c.drawRoundRect(rect, r[i] * 0.5f, r[i] * 0.5f, fill);
+                        c.drawRoundRect(rect, r[i] * 0.5f, r[i] * 0.5f, line);
+                    } else {
+                        c.drawCircle(cx[i], cy[i], r[i], fill);
+                        c.drawCircle(cx[i], cy[i], r[i], line);
+                    }
+                    text.setColor(held ? Color.argb(alpha(1f), 0, 0, 0) : Color.argb(alpha(1f), 255, 255, 255));
+                    text.setTextSize(r[i] * (label[i].length() > 1 ? 0.72f : 0.95f));
+                    c.drawText(label[i], cx[i], cy[i] - (text.descent() + text.ascent()) / 2, text);
                 }
-                text.setColor(held ? Color.argb(alpha(1f), 0, 0, 0) : Color.argb(alpha(1f), 255, 255, 255));
-                text.setTextSize(r[i] * (label[i].length() > 1 ? 0.72f : 0.95f));
-                c.drawText(label[i], cx[i], cy[i] - (text.descent() + text.ascent()) / 2, text);
             }
         }
+    }
+
+    /** The PNG assigned to a Switch face or shoulder button, or null for the ordinary labelled controls. */
+    private Bitmap buttonIcon(long button) {
+        if (button == A) return buttonIcons[0];
+        if (button == B) return buttonIcons[1];
+        if (button == X) return buttonIcons[2];
+        if (button == Y) return buttonIcons[3];
+        if (button == ZR) return buttonIcons[4];
+        if (button == ZL) return buttonIcons[5];
+        if (button == R) return buttonIcons[6];
+        if (button == L) return buttonIcons[7];
+        return null;
     }
 
     /** The editor: the picture's outline, each group's frame (the one held filled), the buttons along the top and what to do */
