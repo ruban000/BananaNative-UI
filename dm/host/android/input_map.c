@@ -179,14 +179,26 @@ static uint64_t dpad_dir(float dx, float dy, float r) {   // 8 directions, a cen
 }
 static void drive(nxin_touch *t, nxin_pointer *p) {   // a pointer on a control or an invisible floating-origin stick
     if (p->ctl == -3 || p->ctl == -4) {
-        int s = p->ctl == -3 ? 0 : 1;
         float aspect = t->sh > 0 ? t->sw / t->sh : 1;
         float dx = (p->x - p->origin_x) * aspect, dy = p->y - p->origin_y;
-        const float radius = 0.18f * STICK_FULL;
-        float sx = dx / radius, sy = -dy / radius, m = sqrtf(sx * sx + sy * sy);
-        if (m > 1) { sx /= m; sy /= m; }
-        if (m < STICK_DEAD) sx = sy = 0;
-        t->sx[s] = sx; t->sy[s] = sy;
+        if (p->ctl == -4) {
+            // Right half is a relative swipe-look surface: each finger movement
+            // nudges the Switch right stick, rather than measuring from a fixed
+            // joystick origin. Keep the previous point so the user can lift and
+            // re-touch anywhere without needing to drag from a fixed centre.
+            const float sensitivity = 24.0f;
+            t->sx[1] = clamp1(dx * sensitivity);
+            t->sy[1] = clamp1(-dy * sensitivity);
+            p->origin_x = p->x;
+            p->origin_y = p->y;
+        } else {
+            // Left half remains a floating-origin movement stick.
+            const float radius = 0.18f * STICK_FULL;
+            float sx = dx / radius, sy = -dy / radius, m = sqrtf(sx * sx + sy * sy);
+            if (m > 1) { sx /= m; sy /= m; }
+            if (m < STICK_DEAD) sx = sy = 0;
+            t->sx[0] = sx; t->sy[0] = sy;
+        }
         return;
     }
     nxhost_touch_control *c = &t->c[p->ctl]; float dx, dy; dist(t, c, p->x, p->y, &dx, &dy);
