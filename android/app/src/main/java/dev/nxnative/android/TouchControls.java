@@ -52,7 +52,7 @@ final class TouchControls extends View {
     private boolean haptics;
     private boolean dualStick;   // one setting: invisible floating-origin left and right sticks
     private int rightSwipeSensitivity;   // user-facing right-side swipe sensitivity (1..10)
-    private static float nativeRightSwipeSensitivity(int level) { return 130.0f + (Math.max(1, Math.min(10, level)) - 1) * (110.0f / 9.0f); }
+    private static int nativeRightSwipeSensitivity(int level) { return 130 + Math.round((Math.max(1, Math.min(10, level)) - 1) * (110.0f / 9.0f)); }
 
     // The layout in pixels, as the host has it
     private int n;
@@ -677,7 +677,7 @@ final class TouchControls extends View {
         SeekBar sensitivityBar = new SeekBar(ctx);
         sensitivityBar.setMax(9);
         sensitivityBar.setProgress(rightSwipeSensitivity - 1);
-        sensitivityBar.setKeyProgressIncrement(2);
+        sensitivityBar.setKeyProgressIncrement(1);
         os.setMax(90); os.setProgress(Math.round(opacity * 100) - 10);   // 10..100 %
         ss.setMax(90); ss.setProgress(Math.round(scale * 100) - 60);     // 60..150 %
         os.setKeyProgressIncrement(5); ss.setKeyProgressIncrement(5);   // the D-pad's left / right: 5 % a press
