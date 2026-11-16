@@ -186,8 +186,8 @@ static void drive(nxin_touch *t, nxin_pointer *p) {   // a pointer on a control 
             // nudges the Switch right stick, rather than measuring from a fixed
             // joystick origin. Keep the previous point so the user can lift and
             // re-touch anywhere without needing to drag from a fixed centre.
-            t->sx[1] = clamp1(dx * t->right_sensitivity);
-            t->sy[1] = clamp1(-dy * t->right_sensitivity);
+            t->sx[1] = clamp1(dx * t->right_sensitivity * 1.8f);
+            t->sy[1] = clamp1(-dy * t->right_sensitivity * 1.8f);
             p->origin_x = p->x;
             p->origin_y = p->y;
         } else {
