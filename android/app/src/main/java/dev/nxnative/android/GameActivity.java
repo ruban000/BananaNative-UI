@@ -108,7 +108,7 @@ public final class GameActivity extends Activity implements SurfaceHolder.Callba
         // The log's last lines (tail()): bottom left, one block only as high as its text, so it stays clear of the build tag in the corner above
         overlay = overlayText(Gravity.BOTTOM | Gravity.START, 1f);
         root.addView(overlay, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.START));
-        // The on-screen controls take every touch and pass it to the host, which tells controls from touchscreen fingers
+        // The controls are a visual overlay; ordinary gameplay touches fall through to GameSurfaceView, which forwards them to the host.
         controls = new TouchControls(this, Native.hasInput());
         surface.setInputChangedListener(controls::inputChanged);
         root.addView(controls, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
