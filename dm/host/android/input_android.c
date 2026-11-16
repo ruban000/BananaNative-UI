@@ -151,6 +151,13 @@ void nxhost_touch_dual_stick(bool on) {
     }
     pthread_mutex_unlock(&g_mu);
 }
+void nxhost_touch_right_sensitivity(float sensitivity) {
+    pthread_mutex_lock(&g_mu); touch_once();
+    if (sensitivity < 8.0f) sensitivity = 8.0f;
+    if (sensitivity > 48.0f) sensitivity = 48.0f;
+    g_touch.right_sensitivity = sensitivity;
+    pthread_mutex_unlock(&g_mu);
+}
 int nxhost_touch_controls_set(const nxhost_touch_control *c, int n) {
     pthread_mutex_lock(&g_mu); touch_once();
     int kept = 0, r = nxin_touch_set_layout(&g_touch, c, n, &kept);
