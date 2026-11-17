@@ -245,7 +245,6 @@ final class TouchControls extends View {
         float shY = y0 + m + 0.7f * rSh;
         add(BUTTON, ZL, 0, SHAPE_SHOULDER, m + rSh, shY, rSh, "ZL");
         add(BUTTON, L, 0, SHAPE_SHOULDER, m + 3 * rSh + 10 * d, shY, rSh, "L");
-        add(BUTTON, ZR, 0, SHAPE_SHOULDER, w - m - rSh, shY, rSh, "ZR");
         add(BUTTON, R, 0, SHAPE_SHOULDER, w - m - 3 * rSh - 10 * d, shY, rSh, "R");
         add(BUTTON, MINUS, 0, SHAPE_ROUND, m + 4 * rSh + 22 * d + rSmall, shY, rSmall, "−");
         add(BUTTON, PLUS, 0, SHAPE_ROUND, w - m - 4 * rSh - 22 * d - rSmall, shY, rSmall, "+");
@@ -266,6 +265,9 @@ final class TouchControls extends View {
         add(STICK, 0, 1, SHAPE_ROUND, rx, ry, rRight, "");
         float diagR = (rRight + rClick + 6 * d) * 0.7071f;
         add(BUTTON, RS, 0, SHAPE_ROUND, rx - diagR, ry - diagR, rClick, "R3");
+        // ZR is an invisible, active shoulder-button hit target at the lower-left edge of the right stick.
+        float diagZR = (rRight + rSh + 6 * d) * 0.7071f;
+        add(BUTTON, ZR, 0, SHAPE_SHOULDER, rx - diagZR, ry + diagZR, rSh, "ZR");
         // Push apart what still overlaps (a large size on a small screen): the later control moves towards the middle
         for (int pass = 0; pass < 4; pass++)
             for (int j = 0; j < n; j++)
@@ -300,6 +302,7 @@ final class TouchControls extends View {
         if (kind[i] == DPAD) return 1;
         if (b == LS) return 0;
         if (b == RS) return 3;
+        if (b == ZR) return 3;
         if ((b & (A | B | X | Y)) != 0) return 2;
         if ((b & (ZL | L | MINUS)) != 0) return 4;
         return 5;
@@ -580,6 +583,8 @@ final class TouchControls extends View {
     private void drawControls(Canvas c) {
         for (int i = 0; i < n; i++) {
             boolean held = pressed[i] != 0;
+            // Keep ZR in the native touch layout, but never draw its icon, shape, or label.
+            if (buttons[i] == ZR) continue;
             fill.setColor(held ? Color.argb(alpha(0.55f), 255, 255, 255) : Color.argb(alpha(0.35f), 0, 0, 0));
             line.setColor(Color.argb(alpha(0.9f), 255, 255, 255));
             if (kind[i] == STICK && dualStick && !editing) continue;
