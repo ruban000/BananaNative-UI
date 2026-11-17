@@ -589,8 +589,10 @@ final class TouchControls extends View {
                 Bitmap icon = buttonIcon(buttons[i]);
                 if (icon != null) {
                     // Fit the complete transparent PNG inside the original visual footprint.
-                    float boxW = shape[i] == SHAPE_SHOULDER ? 2f * r[i] : 2f * r[i];
-                    float boxH = shape[i] == SHAPE_SHOULDER ? 1.24f * r[i] : 2f * r[i];
+                    // Enlarge the artwork within the same button centre; fit the whole image without cropping.
+                    float iconScale = 1.3f;
+                    float boxW = 2f * r[i] * iconScale;
+                    float boxH = (shape[i] == SHAPE_SHOULDER ? 1.24f : 2f) * r[i] * iconScale;
                     float fit = Math.min(boxW / icon.getWidth(), boxH / icon.getHeight());
                     float drawW = icon.getWidth() * fit, drawH = icon.getHeight() * fit;
                     rect.set(cx[i] - drawW / 2f, cy[i] - drawH / 2f, cx[i] + drawW / 2f, cy[i] + drawH / 2f);
