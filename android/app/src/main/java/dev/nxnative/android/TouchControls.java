@@ -53,6 +53,7 @@ final class TouchControls extends View {
     private float opacity, scale;
     private boolean haptics;
     private boolean dualStick;   // one setting: invisible floating-origin left and right sticks
+    private boolean coordinateGrid;   // display-only 10x10 coordinate grid for precise control placement
     private int rightSwipeSensitivity;   // user-facing right-side swipe sensitivity (1..10)
     private static int nativeRightSwipeSensitivity(int level) { return 130 + Math.round((Math.max(1, Math.min(10, level)) - 1) * (110.0f / 9.0f)); }
 
@@ -121,6 +122,7 @@ final class TouchControls extends View {
         scale = prefs().getFloat("scale", 1f);
         haptics = prefs().getBoolean("haptics", true);
         dualStick = prefs().getBoolean("dual_stick", false);
+        coordinateGrid = prefs().getBoolean("coordinate_grid", false);
         int savedSensitivity = prefs().getInt("right_swipe_sensitivity", 3);
         // Migrate the previous native 8..240 preference to the new 1..10 scale.
         rightSwipeSensitivity = savedSensitivity > 10
@@ -189,6 +191,13 @@ final class TouchControls extends View {
         rightSwipeSensitivity = Math.max(1, Math.min(10, value));
         prefs().edit().putInt("right_swipe_sensitivity", rightSwipeSensitivity).commit();
         if (input) Native.touchControlsRightSwipeSensitivity(nativeRightSwipeSensitivity(rightSwipeSensitivity));
+    }
+
+    private void setCoordinateGrid(boolean on) {
+        coordinateGrid = on;
+        prefs().edit().putBoolean("coordinate_grid", on).commit();
+        Native.note("coordinate grid " + (on ? "on (A-J, 1-10)" : "off"));
+        invalidate();
     }
 
     private void setDualStick(boolean on) {
@@ -560,8 +569,10 @@ final class TouchControls extends View {
     private int alpha(float a) { return Math.max(0, Math.min(255, Math.round(255 * a * opacity))); }
 
     @Override protected void onDraw(Canvas c) {
-        if (!available || !visible() && !editing) return;
+        if (!available && !coordinateGrid) return;
         float dp = getResources().getDisplayMetrics().density;
+        if (coordinateGrid) drawCoordinateGrid(c, dp);
+        if (!available || !visible() && !editing) return;
         line.setStrokeWidth(Math.max(1.5f, 1.6f * dp));
         if (editing) { drawControls(c); drawEditor(c, dp); return; }
         // The show / hide button (when it is on): a small pad outline, mostly transparent over the game, fainter still while the controls are hidden
@@ -578,6 +589,40 @@ final class TouchControls extends View {
         }
         if (!on) return;
         drawControls(c);
+    }
+
+    /** A transparent 10x10 reference grid. A-J identify rows from top to bottom; 1-10 identify columns left to right. It never handles touches. */
+    private void drawCoordinateGrid(Canvas c, float dp) {
+        int w = getWidth(), h = getHeight();
+        if (w <= 0 || h <= 0) return;
+        Paint grid = line;
+        grid.setStyle(Paint.Style.STROKE);
+        grid.setStrokeWidth(Math.max(1f, dp));
+        grid.setColor(Color.argb(115, 255, 255, 255));
+        for (int col = 0; col <= 10; col++) {
+            float x = w * col / 10f;
+            c.drawLine(x, 0, x, h, grid);
+        }
+        for (int row = 0; row <= 10; row++) {
+            float y = h * row / 10f;
+            c.drawLine(0, y, w, y, grid);
+        }
+        Paint labels = text;
+        labels.setStyle(Paint.Style.FILL);
+        labels.setTextAlign(Paint.Align.CENTER);
+        labels.setTextSize(13f * dp);
+        labels.setFakeBoldText(true);
+        labels.setColor(Color.WHITE);
+        labels.setShadowLayer(2f * dp, 0, 1f * dp, Color.BLACK);
+        for (int col = 0; col < 10; col++) {
+            String number = String.valueOf(col + 1);
+            c.drawText(number, w * (col + 0.5f) / 10f, 16f * dp, labels);
+        }
+        for (int row = 0; row < 10; row++) {
+            String letter = String.valueOf((char) ('A' + row));
+            c.drawText(letter, 14f * dp, h * (row + 0.5f) / 10f + 5f * dp, labels);
+        }
+        labels.clearShadowLayer();
     }
 
     private void drawControls(Canvas c) {
@@ -717,7 +762,7 @@ final class TouchControls extends View {
         box.addView(mg);
         TextView ol = new TextView(ctx), sl = new TextView(ctx);
         SeekBar os = new SeekBar(ctx), ss = new SeekBar(ctx);
-        CheckBox hb = new CheckBox(ctx), lb = new CheckBox(ctx), tb = new CheckBox(ctx), db = new CheckBox(ctx);
+        CheckBox hb = new CheckBox(ctx), lb = new CheckBox(ctx), tb = new CheckBox(ctx), db = new CheckBox(ctx), gb = new CheckBox(ctx);
         TextView sensitivityLabel = new TextView(ctx);
         SeekBar sensitivityBar = new SeekBar(ctx);
         sensitivityBar.setMax(9);
@@ -733,6 +778,9 @@ final class TouchControls extends View {
         db.setText("Invisible dual joysticks (left / right screen halves)");
         db.setChecked(dualStick);
         db.setOnCheckedChangeListener((b, v) -> setDualStick(v));
+        gb.setText("Coordinate Grid (A-J / 1-10)");
+        gb.setChecked(coordinateGrid);
+        gb.setOnCheckedChangeListener((b, v) -> setCoordinateGrid(v));
         Runnable sensitivityText = () -> sensitivityLabel.setText("Right swipe sensitivity  " + (sensitivityBar.getProgress() + 1));
         sensitivityText.run();
         sensitivityBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -765,7 +813,7 @@ final class TouchControls extends View {
         reset.setText("↻   Reset the controls");
         stylePanelAction(reset, ctx, false);
         reset.setOnClickListener(v -> { os.setProgress(50); ss.setProgress(40); hb.setChecked(true); });   // 60 % opacity, 100 % size, the tick on
-        box.addView(ol); box.addView(os); box.addView(sl); box.addView(ss); box.addView(hb); box.addView(lb); box.addView(tb); box.addView(db);
+        box.addView(ol); box.addView(os); box.addView(sl); box.addView(ss); box.addView(hb); box.addView(lb); box.addView(tb); box.addView(db); box.addView(gb);
         box.addView(sensitivityLabel); box.addView(sensitivityBar);
         addPanelAction(box, reset, ctx);
         Button ed = new Button(ctx);   // the layout editor (runs onEditStart); the picture's position is in the panel's Picture rows (positionRows)
