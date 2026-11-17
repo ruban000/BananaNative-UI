@@ -287,6 +287,12 @@ final class TouchControls extends View {
                     cx[j] += cx[j] < w / 2f ? move : -move;
                 }
         groups(w, h, u);
+        // Place the invisible ZR hit target at the centre of grid cell 17R (20x20 grid).
+        for (int i = 0; i < n; i++) if (buttons[i] == ZR) {
+            cx[i] = w * 16.5f / 20f;
+            cy[i] = h * 17.5f / 20f;
+            break;
+        }
         tr = 10 * u; tx = w / 2f; ty = m + tr;   // small and faint (onDraw); its touch area is larger (onToggle)
         // The host's units: centres normalized to the view, radii in units of its height; a stick's grab ring is its own (input_map.c)
         float[] f = new float[n * 6];
