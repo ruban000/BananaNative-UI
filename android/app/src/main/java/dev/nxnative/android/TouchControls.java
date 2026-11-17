@@ -53,7 +53,7 @@ final class TouchControls extends View {
     private float opacity, scale;
     private boolean haptics;
     private boolean dualStick;   // one setting: invisible floating-origin left and right sticks
-    private boolean coordinateGrid;   // display-only 10x10 coordinate grid for precise control placement
+    private boolean coordinateGrid;   // display-only 20x20 coordinate grid for precise control placement
     private int rightSwipeSensitivity;   // user-facing right-side swipe sensitivity (1..10)
     private static int nativeRightSwipeSensitivity(int level) { return 130 + Math.round((Math.max(1, Math.min(10, level)) - 1) * (110.0f / 9.0f)); }
 
@@ -196,7 +196,7 @@ final class TouchControls extends View {
     private void setCoordinateGrid(boolean on) {
         coordinateGrid = on;
         prefs().edit().putBoolean("coordinate_grid", on).commit();
-        Native.note("coordinate grid " + (on ? "on (A-J, 1-10)" : "off"));
+        Native.note("coordinate grid " + (on ? "on (A-T, 1-20)" : "off"));
         invalidate();
     }
 
@@ -591,7 +591,7 @@ final class TouchControls extends View {
         drawControls(c);
     }
 
-    /** A transparent 10x10 reference grid. A-J identify rows from top to bottom; 1-10 identify columns left to right. It never handles touches. */
+    /** A transparent 20x20 reference grid. A-T identify rows from top to bottom; 1-20 identify columns left to right. It never handles touches. */
     private void drawCoordinateGrid(Canvas c, float dp) {
         int w = getWidth(), h = getHeight();
         if (w <= 0 || h <= 0) return;
@@ -599,12 +599,12 @@ final class TouchControls extends View {
         grid.setStyle(Paint.Style.STROKE);
         grid.setStrokeWidth(Math.max(1f, dp));
         grid.setColor(Color.argb(115, 255, 255, 255));
-        for (int col = 0; col <= 10; col++) {
-            float x = w * col / 10f;
+        for (int col = 0; col <= 20; col++) {
+            float x = w * col / 20f;
             c.drawLine(x, 0, x, h, grid);
         }
-        for (int row = 0; row <= 10; row++) {
-            float y = h * row / 10f;
+        for (int row = 0; row <= 20; row++) {
+            float y = h * row / 20f;
             c.drawLine(0, y, w, y, grid);
         }
         Paint labels = text;
@@ -614,13 +614,13 @@ final class TouchControls extends View {
         labels.setFakeBoldText(true);
         labels.setColor(Color.WHITE);
         labels.setShadowLayer(2f * dp, 0, 1f * dp, Color.BLACK);
-        for (int col = 0; col < 10; col++) {
+        for (int col = 0; col < 20; col++) {
             String number = String.valueOf(col + 1);
-            c.drawText(number, w * (col + 0.5f) / 10f, 16f * dp, labels);
+            c.drawText(number, w * (col + 0.5f) / 20f, 16f * dp, labels);
         }
-        for (int row = 0; row < 10; row++) {
+        for (int row = 0; row < 20; row++) {
             String letter = String.valueOf((char) ('A' + row));
-            c.drawText(letter, 14f * dp, h * (row + 0.5f) / 10f + 5f * dp, labels);
+            c.drawText(letter, 14f * dp, h * (row + 0.5f) / 20f + 5f * dp, labels);
         }
         labels.clearShadowLayer();
     }
@@ -778,7 +778,7 @@ final class TouchControls extends View {
         db.setText("Invisible dual joysticks (left / right screen halves)");
         db.setChecked(dualStick);
         db.setOnCheckedChangeListener((b, v) -> setDualStick(v));
-        gb.setText("Coordinate Grid (A-J / 1-10)");
+        gb.setText("Coordinate Grid (A-T / 1-20)");
         gb.setChecked(coordinateGrid);
         gb.setOnCheckedChangeListener((b, v) -> setCoordinateGrid(v));
         Runnable sensitivityText = () -> sensitivityLabel.setText("Right swipe sensitivity  " + (sensitivityBar.getProgress() + 1));
